@@ -1,6 +1,6 @@
 Le equazioni geodetiche su una varietà differenziabile $M^n$ sono basate sulla seguente equazione differenziale:
 
-$\frac{d^2x^\mu}{d\tau^2}+\Gamma^\mu_{\nu\lambda}\frac{d x^\nu}{d\tau}\frac{d x^\lambda}{d\tau}=0,$ per ogni $\mu,\nu,\lambda=1,\hdots,n$
+$\frac{d^2x^\mu}{d\tau^2}+\Gamma^\mu_{\nu\lambda}\frac{d x^\nu}{d\tau}\frac{d x^\lambda}{d\tau}=0,$ per ogni $\mu,\nu,\lambda=1,...,n$
 
 Dove:
 
