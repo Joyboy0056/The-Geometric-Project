@@ -6,5 +6,5 @@ Dove:
 
 - $x^\mu$ sono coordinate locali sulla varietà.
 - $\Gamma^\mu_{\nu\lambda}$ sono i simboli di Christoffel della Levi-Civita sulla varietà.
-- $\tau$ è il parametro affine lungo la geodetica (spesso il tempo proprio per particelle massive).
+- $\tau$ è il parametro affine lungo la geodetica.
 
