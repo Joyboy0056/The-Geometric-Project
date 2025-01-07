@@ -160,7 +160,7 @@ class Manifold:
         self.compute_riemann_tensor()
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
-        self.compute_einstein_tensor()
+        #self.compute_einstein_tensor()
         
         self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
 
