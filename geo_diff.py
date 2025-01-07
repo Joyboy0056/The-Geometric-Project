@@ -27,7 +27,8 @@ class Manifold:
         self.riemann_tensor = None
         self.ricci_tensor = None
         self.scalar_curvature = None
-
+        self.einstein_tensor = None
+        
     def compute_christoffel_symbols(self):
         """
         Calcola i simboli di Christoffel.
@@ -144,17 +145,28 @@ class Manifold:
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
 
-        einstein_tensor = self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature
-        return einstein_tensor
+        self.einstein_tensor = self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature
+        return self.einstein_tensor
 
 
-    def vacuum_einstein_eqs(self):
-        Lambda = symbols('Lambda')  # costante cosmologica
-        einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+    def vacuum_einstein_eqs(self, Lambda):
+        """
+        Verifica True or False se una Manifold soddisfa le equazioni di Einstein.
+        :param: Lambda è la costante cosmologica; può essere assegnata in sympy
+        sia come Lambda = sympy.symbols('Lambda') che come vera e propria funzione
+        sympy, o semplicemente come funzione costante.
+        """
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
+        self.compute_ricci_tensor()
+        self.compute_scalar_curvature()
+        self.compute_einstein_tensor()
+        
+        self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
 
-        return einstein_tensor + Lambda*self.metric == sp.zeros(self.dimension, self.dimension)
+        return self.einstein_tensor + Lambda*self.metric == sp.zeros(self.dimension, self.dimension)
 
     def vacuum_einstein_eqs_without_cosm_const(self):
-        einstein_tensor = sp.simplify(self.compute_einstein_tensor())
-        return einstein_tensor == sp.zeros(self.dimension, self.dimension)
+        self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
 
