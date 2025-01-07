@@ -1,5 +1,16 @@
 import sympy as sp
-from sympy import symbols, diff, Matrix, MutableDenseNDimArray
+from sympy import symbols, diff, MutableDenseNDimArray
+
+def print_pretty_matrix(matrix, name="Matrix"):
+    """
+    Stampa una matrice SymPy in modo leggibile.
+
+    Args:
+        matrix: matrice SymPy da stampare.
+        name: nome della matrice da visualizzare.
+    """
+    print(f"{name}:")
+    sp.pprint(matrix, use_unicode=True)
 
 class Manifold:
     def __init__(self, metric, coordinates):
@@ -40,13 +51,14 @@ class Manifold:
             christoffel_matrices.append(christoffel_matrix)
 
         self.christoffel_symbols = christoffel_matrices
+        return self.christoffel_symbols
 
     def compute_riemann_tensor(self):
         """
-        Calcola il tensore di curvatura di Riemann.
+        Calcola le componenti del tensore di curvatura di Riemann, nella forma
+        R^ρ_σμν=∂μΓ^ρ_σν−∂νΓ^ρ_σμ+∑_λ(Γ^ρ_μλ Γ^λ_σν−Γ^ρ_νλ Γ^λ_σμ)
         """
-        if self.christoffel_symbols is None:
-            self.compute_christoffel_symbols()
+        self.compute_christoffel_symbols()
 
         Riemann_tensor = MutableDenseNDimArray.zeros(
             self.dimension, self.dimension, self.dimension, self.dimension)
@@ -55,28 +67,32 @@ class Manifold:
             for sigma in range(self.dimension):
                 for mu in range(self.dimension):
                     for nu in range(self.dimension):
-                        partial_mu = diff(self.christoffel_symbols[rho][nu, sigma], self.coords[mu])
-                        partial_nu = diff(self.christoffel_symbols[rho][mu, sigma], self.coords[nu])
+                        # Derivata parziale dei simboli di Christoffel
+                        partial_mu = diff(self.christoffel_symbols[rho][sigma, nu], self.coords[mu])
+                        partial_nu = diff(self.christoffel_symbols[rho][sigma, mu], self.coords[nu])
 
+                        # Somma dei termini gamma
                         gamma_mu = sum(
-                            self.christoffel_symbols[rho][mu, lamb] * self.christoffel_symbols[lamb][nu, sigma]
+                            self.christoffel_symbols[rho][mu, lamb] * self.christoffel_symbols[lamb][sigma, nu]
                             for lamb in range(self.dimension)
                         )
                         gamma_nu = sum(
-                            self.christoffel_symbols[rho][nu, lamb] * self.christoffel_symbols[lamb][mu, sigma]
+                            self.christoffel_symbols[rho][nu, lamb] * self.christoffel_symbols[lamb][sigma, mu]
                             for lamb in range(self.dimension)
                         )
 
+                        # Combinazione finale del tensore di Riemann
                         Riemann_tensor[rho, sigma, mu, nu] = partial_mu - partial_nu + gamma_mu - gamma_nu
 
         self.riemann_tensor = sp.simplify(Riemann_tensor)
+        return self.riemann_tensor
 
     def compute_ricci_tensor(self):
         """
         Calcola il tensore di Ricci.
         """
-        if self.riemann_tensor is None:
-            self.compute_riemann_tensor()
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
 
         ricci_tensor = sp.MutableDenseNDimArray.zeros(self.dimension, self.dimension)
         for mu in range(self.dimension):
@@ -84,13 +100,15 @@ class Manifold:
                 ricci_tensor[mu, nu] = sum(self.riemann_tensor[rho, mu, rho, nu] for rho in range(self.dimension))
 
         self.ricci_tensor = sp.simplify(sp.Matrix(ricci_tensor))
+        return self.ricci_tensor
 
     def compute_scalar_curvature(self):
         """
         Calcola la curvatura scalare.
         """
-        if self.ricci_tensor is None:
-            self.compute_ricci_tensor()
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
+        self.compute_ricci_tensor()
 
         metric_inv = self.metric.inv()
         scalar_curvature = sum(
@@ -99,10 +117,44 @@ class Manifold:
         )
 
         self.scalar_curvature = sp.simplify(scalar_curvature)
+        return self.scalar_curvature
 
-    def pretty_print_matrix(self, matrix, name):
+
+    def create_spacetime_metric(self, scale_factor):
         """
-        Stampa una matrice SymPy in modo leggibile.
+        Costruisce una metrica lorentziana dallo spazio delle foglie spaziali.
+        Assume che la metrica attuale rappresenti solo le foglie spaziali.
         """
-        print(f"{name}:")
-        sp.pprint(matrix, use_unicode=True)
+        if self.metric.shape[0] + 1 != len(self.coords) + 1:
+            raise ValueError("La metrica delle foglie deve essere n-dimensionale rispetto a n+1 coordinate totali.")
+
+        lorentzian_metric = sp.eye(self.dimension + 1)
+        lorentzian_metric[0, 0] = -1  # Aggiunge il termine dt^2
+        lorentzian_metric[1:, 1:] = scale_factor**2*self.metric
+
+        return lorentzian_metric
+
+
+    def compute_einstein_tensor(self):
+        """
+        Calcola il tensore di Einstein.
+        """
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
+        self.compute_ricci_tensor()
+        self.compute_scalar_curvature()
+
+        einstein_tensor = self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature
+        return einstein_tensor
+
+
+    def vacuum_einstein_eqs(self):
+        Lambda = symbols('Lambda')  # costante cosmologica
+        einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+
+        return einstein_tensor + Lambda*self.metric == sp.zeros(self.dimension, self.dimension)
+
+    def vacuum_einstein_eqs_without_cosm_const(self):
+        einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        return einstein_tensor == sp.zeros(self.dimension, self.dimension)
+
