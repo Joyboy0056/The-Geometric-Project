@@ -149,9 +149,36 @@ class Manifold:
         return self.einstein_tensor
 
 
+
+    def einstein_constant(self):
+        """
+        Calcola la costante di Einstein lambda:
+            Ric=lambda*g.
+        """
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
+        self.compute_ricci_tensor()
+        self.compute_scalar_curvature()
+
+        return self.scalar_curvature/self.dimension 
+
+
+    def is_einstein_mfd(self):
+        """
+            Verifica se è una varietà di Einstein
+        """
+        self.compute_christoffel_symbols()
+        self.compute_riemann_tensor()
+        self.compute_ricci_tensor()
+        self.compute_scalar_curvature()
+        l = self.einstein_constant()
+        return self.ricci_tensor == l*self.metric
+
+    
     def vacuum_einstein_eqs(self, Lambda):
         """
         Verifica True or False se una Manifold soddisfa le equazioni di Einstein.
+        
         :param: Lambda è la costante cosmologica; può essere assegnata in sympy
         sia come Lambda = sympy.symbols('Lambda') che come vera e propria funzione
         sympy, o semplicemente come funzione costante.
