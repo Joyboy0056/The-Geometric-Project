@@ -145,7 +145,7 @@ class Manifold:
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
 
-        self.einstein_tensor = self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature
+        self.einstein_tensor = sp.simplify(self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature)
         return self.einstein_tensor
 
 
@@ -187,13 +187,11 @@ class Manifold:
         self.compute_riemann_tensor()
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
-        #self.compute_einstein_tensor()
-        
-        self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        self.compute_einstein_tensor()
 
         return self.einstein_tensor + Lambda*self.metric == sp.zeros(self.dimension, self.dimension)
 
     def vacuum_einstein_eqs_without_cosm_const(self):
-        self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        #self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
         return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
 
