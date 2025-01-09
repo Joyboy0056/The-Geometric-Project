@@ -28,7 +28,10 @@ class Manifold:
         self.ricci_tensor = None
         self.scalar_curvature = None
         self.einstein_tensor = None
-        
+        self.geodesics = None
+        self.sectional_curvature = None
+
+
     def compute_christoffel_symbols(self):
         """
         Calcola i simboli di Christoffel.
@@ -42,9 +45,9 @@ class Manifold:
                 for j in range(self.dimension):
                     term_sum = sum(
                         g_inv[k, sigma] * (
-                            sp.diff(self.metric[i, sigma], self.coords[j]) +
-                            sp.diff(self.metric[sigma, j], self.coords[i]) -
-                            sp.diff(self.metric[i, j], self.coords[sigma])
+                                sp.diff(self.metric[i, sigma], self.coords[j]) +
+                                sp.diff(self.metric[sigma, j], self.coords[i]) -
+                                sp.diff(self.metric[i, j], self.coords[sigma])
                         ) / 2
                         for sigma in range(self.dimension)
                     )
@@ -120,6 +123,67 @@ class Manifold:
         self.scalar_curvature = sp.simplify(scalar_curvature)
         return self.scalar_curvature
 
+    def inner_product(self, X, Y):
+        """
+        Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
+
+        :param X: Vettore X (lista o matrice 1D di dimensione n)
+        :param Y: Vettore Y (lista o matrice 1D di dimensione n)
+        :return: Il prodotto scalare g(X, Y)
+        """
+        # Assicurati che X e Y siano nel formato giusto
+        if len(X) != self.dimension or len(Y) != self.dimension:
+            raise ValueError("I vettori X e Y devono essere di dimensione n.")
+
+        # Calcolare il prodotto scalare g(X, Y) = X^T * g * Y
+        inner_product = 0
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                inner_product += self.metric[i, j] * X[i] * Y[j]
+
+        return inner_product
+
+    def compute_sectional_curvature(self, X, Y):
+        """
+        Calcola la curvatura sezionale per un piano definito dai vettori tangenti X e Y.
+
+        :param X: Vettore tangente X (lista o matrice 1D di dimensione n).
+        :param Y: Vettore tangente Y (lista o matrice 1D di dimensione n).
+        :return: Valore della curvatura sezionale K(X, Y).
+        """
+        if len(X) != self.dimension or len(Y) != self.dimension:
+            raise ValueError("I vettori X e Y devono avere la stessa dimensione delle coordinate della varietà.")
+
+        # Assicura che il tensore di Riemann sia calcolato
+        if self.riemann_tensor is None:
+            self.compute_riemann_tensor()
+
+        # Calcola il numeratore: R(X, Y, X, Y)
+        R_XYXY = 0
+        for mu in range(self.dimension):
+            for nu in range(self.dimension):
+                for sigma in range(self.dimension):
+                    for rho in range(self.dimension):
+                        R_XYXY += (
+                                self.riemann_tensor[mu, nu, sigma, rho] * X[mu] * Y[nu] * X[sigma] * Y[rho]
+                        )
+
+        # Calcola il denominatore: ||X ∧ Y||^2 = g(X, X)g(Y, Y) - g(X, Y)^2
+        g_XX = self.inner_product(X, X)
+        g_YY = self.inner_product(Y, Y)
+        g_XY = self.inner_product(X, Y)
+
+        wedge_norm_squared = g_XX * g_YY - g_XY ** 2
+
+        if wedge_norm_squared == 0:
+            raise ValueError("I vettori X e Y non definiscono un piano valido (sono linearmente dipendenti).")
+
+        # Calcola la curvatura sezionale
+        sectional_curvature = R_XYXY / wedge_norm_squared
+        self.sectional_curvature = sp.simplify(sectional_curvature)
+
+        return self.sectional_curvature
+
 
     def create_spacetime_metric(self, scale_factor):
         """
@@ -131,10 +195,9 @@ class Manifold:
 
         lorentzian_metric = sp.eye(self.dimension + 1)
         lorentzian_metric[0, 0] = -1  # Aggiunge il termine dt^2
-        lorentzian_metric[1:, 1:] = scale_factor**2*self.metric
+        lorentzian_metric[1:, 1:] = scale_factor ** 2 * self.metric
 
         return lorentzian_metric
-
 
     def compute_einstein_tensor(self):
         """
@@ -148,8 +211,6 @@ class Manifold:
         self.einstein_tensor = sp.simplify(self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature)
         return self.einstein_tensor
 
-
-
     def einstein_constant(self):
         """
         Calcola la costante di Einstein lambda:
@@ -160,8 +221,7 @@ class Manifold:
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
 
-        return self.scalar_curvature/self.dimension 
-
+        return self.scalar_curvature / self.dimension
 
     def is_einstein_mfd(self):
         """
@@ -172,13 +232,12 @@ class Manifold:
         self.compute_ricci_tensor()
         self.compute_scalar_curvature()
         l = self.einstein_constant()
-        return self.ricci_tensor == l*self.metric
+        return self.ricci_tensor == l * self.metric
 
-    
     def vacuum_einstein_eqs(self, Lambda):
         """
         Verifica True or False se una Manifold soddisfa le equazioni di Einstein.
-        
+
         :param: Lambda è la costante cosmologica; può essere assegnata in sympy
         sia come Lambda = sympy.symbols('Lambda') che come vera e propria funzione
         sympy, o semplicemente come funzione costante.
@@ -189,9 +248,41 @@ class Manifold:
         self.compute_scalar_curvature()
         self.compute_einstein_tensor()
 
-        return self.einstein_tensor + Lambda*self.metric == sp.zeros(self.dimension, self.dimension)
+        return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
 
     def vacuum_einstein_eqs_without_cosm_const(self):
-        #self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        # self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
         return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
+
+    def compute_geodesic_equations(self):
+        """
+        Calcola le equazioni geodetiche per la varietà.
+
+        Le equazioni hanno la forma:
+            d^2 x^mu / dτ^2 + Γ^mu_{νρ} (dx^ν / dτ) (dx^ρ / dτ) = 0
+
+        :return: Lista delle equazioni geodetiche, una per ogni coordinata.
+        """
+        self.compute_christoffel_symbols()  # Assicura che i simboli di Christoffel siano calcolati
+        tau = sp.Symbol('τ')  # Parametro affine (solitamente rappresentato con τ)
+
+        # Derivate delle coordinate rispetto a τ
+        x = sp.Function('x')(tau)
+        coords_tau = [sp.Function(f"x_{i}")(tau) for i in range(self.dimension)]
+        dx_tau = [sp.diff(coord, tau) for coord in coords_tau]
+        d2x_tau = [sp.diff(d, tau) for d in dx_tau]
+
+        geodesic_eqs = []  # Lista per memorizzare le equazioni geodetiche
+
+        for mu in range(self.dimension):
+            christoffel_sum = sum(
+                self.christoffel_symbols[mu][nu, rho] * dx_tau[nu] * dx_tau[rho]
+                for nu in range(self.dimension)
+                for rho in range(self.dimension)
+            )
+            eq = sp.Eq(d2x_tau[mu], -christoffel_sum)  # Equazione geodetica per la coordinata mu
+            geodesic_eqs.append(eq)
+
+        self.geodesics = geodesic_eqs
+        return self.geodesics
 
