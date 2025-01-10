@@ -189,6 +189,7 @@ class Manifold:
         """
         Costruisce una metrica lorentziana dallo spazio delle foglie spaziali.
         Assume che la metrica attuale rappresenti solo le foglie spaziali.
+        :param: scale_factor è il fattore conforme di scala. Può essere una funzione sympy, una costante...
         """
         if self.metric.shape[0] + 1 != len(self.coords) + 1:
             raise ValueError("La metrica delle foglie deve essere n-dimensionale rispetto a n+1 coordinate totali.")
