@@ -287,3 +287,116 @@ class Manifold:
         self.geodesics = geodesic_eqs
         return self.geodesics
 
+
+
+        def covariant_derivative(self, X, Y):
+        """
+        Calcola la derivata covariante nabla_X Y su una varietà.
+        :param X: Vettore simbolico X (lista o matrice 1D).
+        :param Y: Vettore simbolico Y (lista o matrice 1D).
+        :return: Vettore simbolico della derivata covariante nabla_X Y.
+        """
+        # Assicurati di avere i simboli di Christoffel della varietà
+        self.compute_christoffel_symbols()
+
+        gamma = self.christoffel_symbols  # Simboli di Christoffel
+        dim = self.dimension  # Dimensione della varietà
+        nabla_X_Y = Matrix.zeros(dim)  # Inizializza il risultato come una matrice zero
+
+        # Calcola la derivata covariante
+        for mu in range(dim):  # Itera sulle componenti di nabla_X_Y
+            term1 = sum(diff(Y[j], self.coords[i]) * X[i] for i in range(dim) for j in range(dim))  # Derivata diretta
+            term2 = sum(gamma[mu][i, j] * X[i] * Y[j] for i in range(dim) for j in range(dim))  # Correzione con Christoffel
+            nabla_X_Y[mu] = term1 + term2  # Somma i due termini
+
+        return nabla_X_Y
+
+
+
+    class Submanifold(Manifold):
+    def __init__(self, ambient_manifold, sub_coords, embedding):
+        """
+        Inizializza una sottovarietà.
+        :param ambient_manifold: Istanza della classe Manifold della varietà originale.
+        :param sub_coords: Coordinate simboliche della sottovarietà.
+        :param embedding: Funzione di immersione che esprime le coordinate globali in termini di quelle della sottovarietà.
+        """
+        self.ambient_manifold = ambient_manifold
+        self.sub_coords = sub_coords
+        self.embedding = embedding  # Lista di espressioni simboliche contenente l'immagine vettoriale (in Rm) di una submanifold Sigma^n
+        self.dimension = len(sub_coords)
+
+        # Costruisci la metrica indotta
+        self.embedding_jacobian = None
+        self.induced_metric = None
+        self.normal_vector = None
+        self.second_fundamental_form = None
+
+    def compute_embedding_jacobian(self):
+        self.embedding_jacobian = Matrix([
+            [diff(f, coord) for coord in self.sub_coords]
+            for f in self.embedding
+            ])
+
+        return self.embedding_jacobian
+
+
+    def compute_induced_metric(self):
+        """
+        Calcola la metrica indotta sulla sottovarietà.
+        :return: Matrice simbolica della metrica indotta.
+        """
+        g = self.ambient_manifold.metric  # Metrica della varietà ambiente
+        self.compute_embedding_jacobian() # Jacobiano dell'immersione
+
+        # Metrica indotta: G_ab = (Jacobian)^T * g * (Jacobian)
+        self.induced_metric = sp.simplify(self.embedding_jacobian.T * g * self.embedding_jacobian)
+        return self.induced_metric
+
+
+    def compute_normal_vector(self):
+        """
+        Calcola un vettore normale alla sottovarietà.
+        :return: Vettore simbolico normale.
+        """
+        embedding_jacobian = Matrix([
+            [diff(f, coord) for coord in self.sub_coords]
+            for f in self.embedding
+            ])
+        # Trova il vettore normale come il complemento ortogonale al Jacobiano
+        # usando il prodotto interno definito dalla metrica ambiente.
+        g = self.ambient_manifold.metric
+        tangent_vectors = embedding_jacobian.T
+        all_basis_vectors = Matrix.eye(len(self.embedding))  # Base canonica di R^n
+        normal_vector = all_basis_vectors - tangent_vectors  # Proiezione fuori dal tangente
+        self.normal_vector = normal_vector
+        return self.normal_vector
+
+    def compute_second_fundamental_form(self, normal_vector):
+        """
+        Calcola la seconda forma fondamentale per la sottovarietà.
+        :return: Matrice simbolica della seconda forma fondamentale.
+        """
+        self.compute_embedding_jacobian()
+
+        II = Matrix.zeros(self.dimension, self.dimension)
+
+        # Vettori tangenti
+        tangent_vectors = [self.embedding_jacobian[:, i] for i in range(self.dimension)]
+
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                cov_der = self.ambient_manifold.covariant_derivative(tangent_vectors[i],tangent_vectors[j])
+                print(cov_der)
+                II[i,j] = self.ambient_manifold.inner_product(normal_vector,cov_der)
+                #II[i, j] = normal_vector.dot(cov_der)
+        self.second_fundamental_form = sp.simplify(II)
+        return self.second_fundamental_form
+
+
+
+
+
+
+
+
