@@ -313,7 +313,8 @@ class Manifold:
 
 
 
-    class Submanifold(Manifold):
+
+class Submanifold(Manifold):
     def __init__(self, ambient_manifold, sub_coords, embedding):
         """
         Inizializza una sottovarietà.
