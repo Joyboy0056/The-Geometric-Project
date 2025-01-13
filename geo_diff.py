@@ -1,5 +1,5 @@
 import sympy as sp
-from sympy import symbols, diff, MutableDenseNDimArray
+from sympy import Matrix, diff, MutableDenseNDimArray
 
 def print_pretty_matrix(matrix, name="Matrix"):
     """
@@ -23,13 +23,14 @@ class Manifold:
         self.metric = metric
         self.coords = coordinates
         self.dimension = len(coordinates)
+        
         self.christoffel_symbols = None
         self.riemann_tensor = None
         self.ricci_tensor = None
         self.scalar_curvature = None
         self.einstein_tensor = None
-        self.geodesics = None
         self.sectional_curvature = None
+        self.geodesics = None
 
 
     def compute_christoffel_symbols(self):
@@ -48,9 +49,9 @@ class Manifold:
                                 sp.diff(self.metric[i, sigma], self.coords[j]) +
                                 sp.diff(self.metric[sigma, j], self.coords[i]) -
                                 sp.diff(self.metric[i, j], self.coords[sigma])
-                        ) / 2
+                                ) / 2
                         for sigma in range(self.dimension)
-                    )
+                        )
                     christoffel_matrix[i, j] = term_sum
             christoffel_matrices.append(christoffel_matrix)
 
@@ -79,11 +80,11 @@ class Manifold:
                         gamma_mu = sum(
                             self.christoffel_symbols[rho][mu, lamb] * self.christoffel_symbols[lamb][sigma, nu]
                             for lamb in range(self.dimension)
-                        )
+                            )
                         gamma_nu = sum(
                             self.christoffel_symbols[rho][nu, lamb] * self.christoffel_symbols[lamb][sigma, mu]
                             for lamb in range(self.dimension)
-                        )
+                            )
 
                         # Combinazione finale del tensore di Riemann
                         Riemann_tensor[rho, sigma, mu, nu] = partial_mu - partial_nu + gamma_mu - gamma_nu
@@ -95,7 +96,6 @@ class Manifold:
         """
         Calcola il tensore di Ricci.
         """
-        self.compute_christoffel_symbols()
         self.compute_riemann_tensor()
 
         ricci_tensor = sp.MutableDenseNDimArray.zeros(self.dimension, self.dimension)
@@ -110,8 +110,6 @@ class Manifold:
         """
         Calcola la curvatura scalare.
         """
-        self.compute_christoffel_symbols()
-        self.compute_riemann_tensor()
         self.compute_ricci_tensor()
 
         metric_inv = self.metric.inv()
@@ -121,27 +119,65 @@ class Manifold:
         )
 
         self.scalar_curvature = sp.simplify(scalar_curvature)
-        return self.scalar_curvature
+        return self.scalar_curvature #forse potevo direttamente fare
+                                     # return self.ricci_tensor.trace (?)
 
-    def inner_product(self, X, Y):
+
+    def create_spacetime_metric(self, scale_factor):
         """
-        Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
-
-        :param X: Vettore X (lista o matrice 1D di dimensione n)
-        :param Y: Vettore Y (lista o matrice 1D di dimensione n)
-        :return: Il prodotto scalare g(X, Y)
+        Costruisce una metrica lorentziana dallo spazio delle foglie spaziali.
+        Assume che la metrica attuale rappresenti solo le foglie spaziali.
+        :param: scale_factor è il fattore conforme di scala. Può essere una funzione sympy, una costante...
         """
-        # Assicurati che X e Y siano nel formato giusto
-        if len(X) != self.dimension or len(Y) != self.dimension:
-            raise ValueError("I vettori X e Y devono essere di dimensione n.")
+        if self.metric.shape[0] + 1 != len(self.coords) + 1:
+            raise ValueError("La metrica delle foglie deve essere n-dimensionale rispetto a n+1 coordinate totali.")
 
-        # Calcolare il prodotto scalare g(X, Y) = X^T * g * Y
-        inner_product = 0
-        for i in range(self.dimension):
-            for j in range(self.dimension):
-                inner_product += self.metric[i, j] * X[i] * Y[j]
+        lorentzian_metric = sp.eye(self.dimension + 1)
+        lorentzian_metric[0, 0] = -1  # Aggiunge il termine dt^2
+        lorentzian_metric[1:, 1:] = scale_factor ** 2 * self.metric
 
-        return inner_product
+        return lorentzian_metric
+    
+
+    def compute_einstein_tensor(self):
+        """
+        Calcola il tensore di Einstein.
+        """
+        self.compute_scalar_curvature()
+        self.einstein_tensor = sp.simplify(self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature)
+        return self.einstein_tensor
+
+    def einstein_constant(self):
+        """
+        Calcola la costante di Einstein lambda:
+            Ric=lambda*g.
+        """
+        self.compute_scalar_curvature()
+        return self.scalar_curvature / self.dimension
+
+    def is_einstein_mfd(self):
+        """
+            Verifica se è una varietà di Einstein
+        """
+        self.compute_scalar_curvature()
+        l = self.einstein_constant()
+        return self.ricci_tensor == l * self.metric
+
+    def vacuum_einstein_eqs(self, Lambda):
+        """
+        Verifica True or False se una Manifold soddisfa le equazioni di Einstein.
+
+        :param: Lambda è la costante cosmologica; può essere assegnata in sympy
+        sia come Lambda = sympy.symbols('Lambda') che come vera e propria funzione
+        sympy, o semplicemente come funzione costante.
+        """
+        self.compute_einstein_tensor()
+        return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
+
+    def vacuum_einstein_eqs_without_cosm_const(self):
+        # self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
+        return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
+    
 
     def compute_sectional_curvature(self, X, Y):
         """
@@ -154,9 +190,7 @@ class Manifold:
         if len(X) != self.dimension or len(Y) != self.dimension:
             raise ValueError("I vettori X e Y devono avere la stessa dimensione delle coordinate della varietà.")
 
-        # Assicura che il tensore di Riemann sia calcolato
-        if self.riemann_tensor is None:
-            self.compute_riemann_tensor()
+        self.compute_riemann_tensor()
 
         # Calcola il numeratore: R(X, Y, X, Y)
         R_XYXY = 0
@@ -183,77 +217,28 @@ class Manifold:
         self.sectional_curvature = sp.simplify(sectional_curvature)
 
         return self.sectional_curvature
+    
 
-
-    def create_spacetime_metric(self, scale_factor):
+    def inner_product(self, X, Y):
         """
-        Costruisce una metrica lorentziana dallo spazio delle foglie spaziali.
-        Assume che la metrica attuale rappresenti solo le foglie spaziali.
-        :param: scale_factor è il fattore conforme di scala. Può essere una funzione sympy, una costante...
+        Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
+
+        :param X: Vettore X (lista o matrice 1D di dimensione n)
+        :param Y: Vettore Y (lista o matrice 1D di dimensione n)
+        :return: Il prodotto scalare g(X, Y)
         """
-        if self.metric.shape[0] + 1 != len(self.coords) + 1:
-            raise ValueError("La metrica delle foglie deve essere n-dimensionale rispetto a n+1 coordinate totali.")
+        # Assicuriamoci che X e Y siano nel formato giusto
+        #if len(X) != self.dimension or len(Y) != self.dimension:
+         #   raise ValueError("I vettori X e Y devono essere di dimensione n.")
 
-        lorentzian_metric = sp.eye(self.dimension + 1)
-        lorentzian_metric[0, 0] = -1  # Aggiunge il termine dt^2
-        lorentzian_metric[1:, 1:] = scale_factor ** 2 * self.metric
+        # Calcolare il prodotto scalare g(X, Y) = X^T * g * Y
+        inner_product = 0
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                inner_product += self.metric[i, j] * X[i] * Y[j]
 
-        return lorentzian_metric
-
-    def compute_einstein_tensor(self):
-        """
-        Calcola il tensore di Einstein.
-        """
-        self.compute_christoffel_symbols()
-        self.compute_riemann_tensor()
-        self.compute_ricci_tensor()
-        self.compute_scalar_curvature()
-
-        self.einstein_tensor = sp.simplify(self.ricci_tensor - (1 / 2) * self.metric * self.scalar_curvature)
-        return self.einstein_tensor
-
-    def einstein_constant(self):
-        """
-        Calcola la costante di Einstein lambda:
-            Ric=lambda*g.
-        """
-        self.compute_christoffel_symbols()
-        self.compute_riemann_tensor()
-        self.compute_ricci_tensor()
-        self.compute_scalar_curvature()
-
-        return self.scalar_curvature / self.dimension
-
-    def is_einstein_mfd(self):
-        """
-            Verifica se è una varietà di Einstein
-        """
-        self.compute_christoffel_symbols()
-        self.compute_riemann_tensor()
-        self.compute_ricci_tensor()
-        self.compute_scalar_curvature()
-        l = self.einstein_constant()
-        return self.ricci_tensor == l * self.metric
-
-    def vacuum_einstein_eqs(self, Lambda):
-        """
-        Verifica True or False se una Manifold soddisfa le equazioni di Einstein.
-
-        :param: Lambda è la costante cosmologica; può essere assegnata in sympy
-        sia come Lambda = sympy.symbols('Lambda') che come vera e propria funzione
-        sympy, o semplicemente come funzione costante.
-        """
-        self.compute_christoffel_symbols()
-        self.compute_riemann_tensor()
-        self.compute_ricci_tensor()
-        self.compute_scalar_curvature()
-        self.compute_einstein_tensor()
-
-        return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
-
-    def vacuum_einstein_eqs_without_cosm_const(self):
-        # self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
-        return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
+        return inner_product
+    
 
     def compute_geodesic_equations(self):
         """
@@ -285,33 +270,7 @@ class Manifold:
             geodesic_eqs.append(eq)
 
         self.geodesics = geodesic_eqs
-        return self.geodesics
-
-
-
-        def covariant_derivative(self, X, Y):
-        """
-        Calcola la derivata covariante nabla_X Y su una varietà.
-        :param X: Vettore simbolico X (lista o matrice 1D).
-        :param Y: Vettore simbolico Y (lista o matrice 1D).
-        :return: Vettore simbolico della derivata covariante nabla_X Y.
-        """
-        # Assicurati di avere i simboli di Christoffel della varietà
-        self.compute_christoffel_symbols()
-
-        gamma = self.christoffel_symbols  # Simboli di Christoffel
-        dim = self.dimension  # Dimensione della varietà
-        nabla_X_Y = Matrix.zeros(dim)  # Inizializza il risultato come una matrice zero
-
-        # Calcola la derivata covariante
-        for mu in range(dim):  # Itera sulle componenti di nabla_X_Y
-            term1 = sum(diff(Y[j], self.coords[i]) * X[i] for i in range(dim) for j in range(dim))  # Derivata diretta
-            term2 = sum(gamma[mu][i, j] * X[i] * Y[j] for i in range(dim) for j in range(dim))  # Correzione con Christoffel
-            nabla_X_Y[mu] = term1 + term2  # Somma i due termini
-
-        return nabla_X_Y
-
-
+        return self.geodesic
 
 
 class Submanifold(Manifold):
@@ -327,11 +286,10 @@ class Submanifold(Manifold):
         self.embedding = embedding  # Lista di espressioni simboliche contenente l'immagine vettoriale (in Rm) di una submanifold Sigma^n
         self.dimension = len(sub_coords)
 
-        # Costruisci la metrica indotta
         self.embedding_jacobian = None
         self.induced_metric = None
-        self.normal_vector = None
         self.second_fundamental_form = None
+        self.mean_curvature = None
 
     def compute_embedding_jacobian(self):
         self.embedding_jacobian = Matrix([
@@ -350,28 +308,37 @@ class Submanifold(Manifold):
         g = self.ambient_manifold.metric  # Metrica della varietà ambiente
         self.compute_embedding_jacobian() # Jacobiano dell'immersione
 
-        # Metrica indotta: G_ab = (Jacobian)^T * g * (Jacobian)
+        # Metrica indotta: (Jacobian)^T * g * (Jacobian)
         self.induced_metric = sp.simplify(self.embedding_jacobian.T * g * self.embedding_jacobian)
         return self.induced_metric
 
+    
+    def covariant_derivative(self, X, Y):
+        """
+        Calcola la derivata covariante nabla_X Y su una varietà.
+        :param X: Vettore simbolico X (lista o matrice 1D).
+        :param Y: Vettore simbolico Y (lista o matrice 1D).
+        :return: Vettore simbolico della derivata covariante nabla_X Y.
 
-    def compute_normal_vector(self):
+        Nota: nabla è sempre la connessione di Levi-Civita dell'ambiente
         """
-        Calcola un vettore normale alla sottovarietà.
-        :return: Vettore simbolico normale.
-        """
-        embedding_jacobian = Matrix([
-            [diff(f, coord) for coord in self.sub_coords]
-            for f in self.embedding
-            ])
-        # Trova il vettore normale come il complemento ortogonale al Jacobiano
-        # usando il prodotto interno definito dalla metrica ambiente.
-        g = self.ambient_manifold.metric
-        tangent_vectors = embedding_jacobian.T
-        all_basis_vectors = Matrix.eye(len(self.embedding))  # Base canonica di R^n
-        normal_vector = all_basis_vectors - tangent_vectors  # Proiezione fuori dal tangente
-        self.normal_vector = normal_vector
-        return self.normal_vector
+        """NON FUNZIONA BENE, credo"""
+        
+        # # Verifica che la metrica ambiente sia definita
+        # if self.ambient_manifold.metric is None:
+        #     raise ValueError("La metrica della varietà ambiente non è definita.")
+
+        # Calcola i simboli di Christoffel nella varietà ambiente
+        gamma = self.ambient_manifold.compute_christoffel_symbols()
+        (m, n) = self.embedding_jacobian.shape #the jacobian of an F:\Sigma^n\to\R^m is a mxn matrix
+        nabla_XY = Matrix.zeros(m, 1)
+
+        for k in range(m):  # Itera sulle componenti di nabla_X_Y
+            term1 = sum(diff(Y[j], self.sub_coords[i]) * X[i] for i in range(n) for j in range(n) if i==j)  # Derivata vera
+            term2 = sum(gamma[k][i, j] * X[i] * Y[j] for i in range(n) for j in range(n) if i==j)  # Correzione con Christoffel
+            nabla_XY[k] = term1 + term2  # Somma i due termini
+
+        return nabla_XY
 
     def compute_second_fundamental_form(self, normal_vector):
         """
@@ -387,10 +354,10 @@ class Submanifold(Manifold):
 
         for i in range(self.dimension):
             for j in range(self.dimension):
-                cov_der = self.ambient_manifold.covariant_derivative(tangent_vectors[i],tangent_vectors[j])
-                print(cov_der)
-                II[i,j] = self.ambient_manifold.inner_product(normal_vector,cov_der)
-                #II[i, j] = normal_vector.dot(cov_der)
+                cov_der = self.covariant_derivative(tangent_vectors[i],tangent_vectors[j])
+                
+                II[i,j] = -self.ambient_manifold.inner_product(normal_vector,cov_der)
+                #II[i, j] = -normal_vector.dot(cov_der)
         self.second_fundamental_form = sp.simplify(II)
         return self.second_fundamental_form
 
