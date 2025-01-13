@@ -364,7 +364,7 @@ class Submanifold(Manifold):
 
 
 
-
+# !!! Da perfezionare: funzione per la derivata covariante e per le curve geodetiche
 
 
 
