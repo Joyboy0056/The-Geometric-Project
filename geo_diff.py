@@ -313,53 +313,61 @@ class Submanifold(Manifold):
         return self.induced_metric
 
     
-    def covariant_derivative(self, X, Y):
-        """
-        Calcola la derivata covariante nabla_X Y su una varietà.
-        :param X: Vettore simbolico X (lista o matrice 1D).
-        :param Y: Vettore simbolico Y (lista o matrice 1D).
-        :return: Vettore simbolico della derivata covariante nabla_X Y.
-
-        Nota: nabla è sempre la connessione di Levi-Civita dell'ambiente
-        """
-        """NON FUNZIONA BENE, credo"""
-        
-        # # Verifica che la metrica ambiente sia definita
-        # if self.ambient_manifold.metric is None:
-        #     raise ValueError("La metrica della varietà ambiente non è definita.")
-
-        # Calcola i simboli di Christoffel nella varietà ambiente
-        gamma = self.ambient_manifold.compute_christoffel_symbols()
-        (m, n) = self.embedding_jacobian.shape #the jacobian of an F:\Sigma^n\to\R^m is a mxn matrix
-        nabla_XY = Matrix.zeros(m, 1)
-
-        for k in range(m):  # Itera sulle componenti di nabla_X_Y
-            term1 = sum(diff(Y[j], self.sub_coords[i]) * X[i] for i in range(n) for j in range(n) if i==j)  # Derivata vera
-            term2 = sum(gamma[k][i, j] * X[i] * Y[j] for i in range(n) for j in range(n) if i==j)  # Correzione con Christoffel
-            nabla_XY[k] = term1 + term2  # Somma i due termini
-
-        return nabla_XY
-
-    def compute_second_fundamental_form(self, normal_vector):
+        def compute_second_fundamental_form(self, normal_field):
         """
         Calcola la seconda forma fondamentale per la sottovarietà.
+        :param: Normal vector field in forma di vettore sympy.
         :return: Matrice simbolica della seconda forma fondamentale.
         """
         self.compute_embedding_jacobian()
 
-        II = Matrix.zeros(self.dimension, self.dimension)
-
-        # Vettori tangenti
+        II = sp.zeros(self.dimension, self.dimension)  # Matrice della seconda forma fondamentale
         tangent_vectors = [self.embedding_jacobian[:, i] for i in range(self.dimension)]
+        coords = self.sub_coords
 
+        # Creazione di una matrice personalizzata per le derivate (matrice di vettori)
+        num_vectors = len(tangent_vectors)
+        num_coords = len(coords)
+
+        # Matrice di derivate, dove ogni elemento è un vettore (colonna)
+        derivative_matrix = [[None for _ in range(num_vectors)] for _ in range(num_coords)]
+        #precisamente, l'elemento (i,j) è il j-esimo vettore tg derivato rispetto alla coord i-esima
+
+        # Calcolo delle derivate
+        for j, tangent_vector in enumerate(tangent_vectors):  # Itera sui vettori tangenti
+            for i, coord in enumerate(coords):  # Itera sulle coordinate
+                # Calcola la derivata del vettore tangente rispetto alla coordinata
+                derivative_matrix[i][j] = tangent_vector.diff(coord)
+
+        # Calcolo della seconda forma fondamentale
         for i in range(self.dimension):
             for j in range(self.dimension):
-                cov_der = self.covariant_derivative(tangent_vectors[i],tangent_vectors[j])
-                
-                II[i,j] = -self.ambient_manifold.inner_product(normal_vector,cov_der)
-                #II[i, j] = -normal_vector.dot(cov_der)
+                II[i, j] = normal_field.dot(derivative_matrix[i][j]) # h(X,Y) =<nabla_XY, n>_R^m
+                # nota: così va bene solo se l'ambiente è euclideo;
+                # bisogna aggiungere la correzione coi chrystoffels
         self.second_fundamental_form = sp.simplify(II)
         return self.second_fundamental_form
+
+
+    def compute_mean_curvature(self, normal_field):
+        """
+        Calcola la curvatura media della varietà immersa.
+        :param: Normal vector field in forma di vettore sympy
+        :return: Scalare in forma di sympy function o costante
+                Traccia della matrice II
+        """
+        self.compute_second_fundamental_form(normal_field)
+        self.compute_induced_metric()
+
+        I = self.induced_metric
+        II = self.second_fundamental_form
+        H = 0
+        for a in range(self.dimension):
+                #H += I[a, a]*II[a, a] devo usare la metrica o tracciare e basta
+                H += II[a, a]
+
+        self.mean_curvature = sp.simplify(H)
+        return self.mean_curvature
 
 
 
