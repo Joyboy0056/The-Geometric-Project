@@ -315,36 +315,50 @@ class Submanifold(Manifold):
     
         def compute_second_fundamental_form(self, normal_field):
         """
-        Calcola la seconda forma fondamentale per la sottovarietà.
-        :param: Normal vector field in forma di vettore sympy.
+        Calcola la seconda forma fondamentale per la sottovarietà in un ambiente con connessione in generale non piatta.
+        :param: normal_field: Campo normale in forma di vettore SymPy.
         :return: Matrice simbolica della seconda forma fondamentale.
         """
         self.compute_embedding_jacobian()
+        self.ambient_manifold.compute_christoffel_symbols()
+        Gamma = self.ambient_manifold.christoffel_symbols  
 
-        II = sp.zeros(self.dimension, self.dimension)  # Matrice della seconda forma fondamentale
+        II = sp.zeros(self.dimension, self.dimension)  
         tangent_vectors = [self.embedding_jacobian[:, i] for i in range(self.dimension)]
         coords = self.sub_coords
 
-        # Creazione di una matrice personalizzata per le derivate (matrice di vettori)
-        num_vectors = len(tangent_vectors)
+        num_vectors = len(tangent_vectors) #è la dimensione dell'immagine dell'embedding
         num_coords = len(coords)
 
         # Matrice di derivate, dove ogni elemento è un vettore (colonna)
         derivative_matrix = [[None for _ in range(num_vectors)] for _ in range(num_coords)]
-        #precisamente, l'elemento (i,j) è il j-esimo vettore tg derivato rispetto alla coord i-esima
 
-        # Calcolo delle derivate
+        # Calcolo delle derivate dirette dei vettori tangenti
         for j, tangent_vector in enumerate(tangent_vectors):  # Itera sui vettori tangenti
             for i, coord in enumerate(coords):  # Itera sulle coordinate
-                # Calcola la derivata del vettore tangente rispetto alla coordinata
+                # Calcola la derivata del j-esimo vettore tangente rispetto alla i-esima coordinata
                 derivative_matrix[i][j] = tangent_vector.diff(coord)
 
-        # Calcolo della seconda forma fondamentale
-        for i in range(self.dimension):
-            for j in range(self.dimension):
-                II[i, j] = normal_field.dot(derivative_matrix[i][j]) # h(X,Y) =<nabla_XY, n>_R^m
-                # nota: così va bene solo se l'ambiente è euclideo;
-                # bisogna aggiungere la correzione coi chrystoffels
+        # Correzione della connessione
+        for i in range(self.dimension):  # indice di derivazione
+            for j in range(self.dimension):  # Indice del vettore tangente da derivare
+                # Inizializziamo la derivata covariante
+                nabla_XY = derivative_matrix[i][j]
+                # Inizializzo la derivata covariante come la derivata diretta precedentemente costruita
+
+                # Aggiungo la correzione dei Christoffel
+                christoffel_correction = sp.zeros(len(tangent_vectors[0]), 1)  # Vettore colonna
+                for k in range(len(tangent_vectors[0])):  # Componente del vettore
+                    for m in range(len(tangent_vectors[0])):  # Somma sui vettori tangenti
+                        christoffel_correction[k] += Gamma[k][i, m] * tangent_vectors[j][m]
+
+                # Aggiorna la derivata covariante con la correzione
+                nabla_XY += christoffel_correction
+
+                # Calcola la proiezione su normal_field per la seconda forma fondamentale
+                II[i, j] = normal_field.dot(nabla_XY)
+
+        # Salva e restituisci la seconda forma fondamentale
         self.second_fundamental_form = sp.simplify(II)
         return self.second_fundamental_form
 
