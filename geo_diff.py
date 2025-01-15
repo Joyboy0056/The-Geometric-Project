@@ -359,12 +359,13 @@ class Submanifold(Manifold):
         self.compute_second_fundamental_form(normal_field)
         self.compute_induced_metric()
 
-        I = self.induced_metric
+        I = self.induced_metric.inv()
         II = self.second_fundamental_form
         H = 0
         for a in range(self.dimension):
-                #H += I[a, a]*II[a, a] devo usare la metrica o tracciare e basta
-                H += II[a, a]
+            for b in range(self.dimension):
+                if a == b:
+                    H += I[a, b] * II[a, b]
 
         self.mean_curvature = sp.simplify(H)
         return self.mean_curvature
