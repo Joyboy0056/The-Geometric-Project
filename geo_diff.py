@@ -313,7 +313,7 @@ class Submanifold(Manifold):
         return self.induced_metric
 
     
-        def compute_second_fundamental_form(self, normal_field):
+    def compute_second_fundamental_form(self, normal_field):
         """
         Calcola la seconda forma fondamentale per la sottovarietà in un ambiente con connessione in generale non piatta.
         :param: normal_field: Campo normale in forma di vettore SymPy.
@@ -385,7 +385,8 @@ class Submanifold(Manifold):
         return self.mean_curvature
 
 
-
+    def is_minimal(self):
+        return self.mean_curvature == 0
 
 # !!! Da perfezionare: funzione per la derivata covariante e per le curve geodetiche
 
