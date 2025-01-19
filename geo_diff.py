@@ -240,37 +240,44 @@ class Manifold:
         return inner_product
     
 
-    def compute_geodesic_equations(self):
+        def compute_geodesic_equations(self):
         """
-        Calcola le equazioni geodetiche per la varietà.
+        Calcola simbolicamente le equazioni geodetiche per la varietà.
 
         Le equazioni hanno la forma:
             d^2 x^mu / dτ^2 + Γ^mu_{νρ} (dx^ν / dτ) (dx^ρ / dτ) = 0
 
-        :return: Lista delle equazioni geodetiche, una per ogni coordinata.
+        :return: Lista delle equazioni geodetiche, una per ogni coordinata, in forma sp.Equality.
         """
-        self.compute_christoffel_symbols()  # Assicura che i simboli di Christoffel siano calcolati
-        tau = sp.Symbol('τ')  # Parametro affine (solitamente rappresentato con τ)
+        self.compute_christoffel_symbols()
 
-        # Derivate delle coordinate rispetto a τ
-        x = sp.Function('x')(tau)
-        coords_tau = [sp.Function(f"x_{i}")(tau) for i in range(self.dimension)]
-        dx_tau = [sp.diff(coord, tau) for coord in coords_tau]
-        d2x_tau = [sp.diff(d, tau) for d in dx_tau]
+        # Variabili per le derivate delle coordinate
+        t = sp.symbols('τ')  # Parametro della curva
+        coords = self.coords
+        coord_funcs = [sp.Function(str(coord))(t) for coord in coords]
 
-        geodesic_eqs = []  # Lista per memorizzare le equazioni geodetiche
+        # Velocità (prime derivate rispetto a t)
+        velocities = [sp.diff(func, t) for func in coord_funcs]
 
-        for mu in range(self.dimension):
-            christoffel_sum = sum(
-                self.christoffel_symbols[mu][nu, rho] * dx_tau[nu] * dx_tau[rho]
-                for nu in range(self.dimension)
-                for rho in range(self.dimension)
-            )
-            eq = sp.Eq(d2x_tau[mu], -christoffel_sum)  # Equazione geodetica per la coordinata mu
-            geodesic_eqs.append(eq)
+        # Accelerazioni (seconde derivate rispetto a t)
+        accelerations = [sp.diff(vel, t) for vel in velocities]
 
-        self.geodesics = geodesic_eqs
-        return self.geodesic
+        # Equazioni geodetiche
+        geodesic_equations = []
+        for i in range(self.dimension):
+            equation = accelerations[i]
+            for j in range(self.dimension):
+                for k in range(self.dimension):
+                    equation += -self.christoffel_symbols[i][j, k] * velocities[j] * velocities[k]
+            geodesic_equations.append(sp.Eq(equation, 0))
+
+        self.geodesics = geodesic_equations
+        return self.geodesics
+        # NOTA: one can use sp.pprint for a good formatting
+        #       also, through "from sympy.printing.latex import latex"
+        #       one can script "latex(self.geodesics[j])" for some j, 
+        #       to get the latex code for an even better visualization.
+
 
 
 class Submanifold(Manifold):
@@ -387,8 +394,6 @@ class Submanifold(Manifold):
 
     def is_minimal(self):
         return self.mean_curvature == 0
-
-# !!! Da perfezionare: funzione per la derivata covariante e per le curve geodetiche
 
 
 
