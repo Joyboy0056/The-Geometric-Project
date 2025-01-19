@@ -268,7 +268,7 @@ class Manifold:
             equation = accelerations[i]
             for j in range(self.dimension):
                 for k in range(self.dimension):
-                    equation += -self.christoffel_symbols[i][j, k] * velocities[j] * velocities[k]
+                    equation += self.christoffel_symbols[i][j, k] * velocities[j] * velocities[k]
             geodesic_equations.append(sp.Eq(equation, 0))
 
         self.geodesics = geodesic_equations
