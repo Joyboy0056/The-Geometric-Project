@@ -289,6 +289,9 @@ class Submanifold(Manifold):
         :param embedding: Funzione di immersione che esprime le coordinate globali in termini di quelle della sottovarietà.
         """
         self.ambient_manifold = ambient_manifold
+        self.coords = self.ambient_manifold.coords
+        self.metric = self.ambient_manifold.metric
+        
         self.sub_coords = sub_coords
         self.embedding = embedding  # Lista di espressioni simboliche contenente l'immagine vettoriale (in Rm) di una submanifold Sigma^n
         self.dimension = len(sub_coords)
