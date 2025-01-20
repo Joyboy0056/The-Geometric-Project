@@ -289,17 +289,17 @@ class Submanifold(Manifold):
         :param embedding: Funzione di immersione che esprime le coordinate globali in termini di quelle della sottovarietà.
         """
         self.ambient_manifold = ambient_manifold
-        self.coords = self.ambient_manifold.coords
-        self.metric = self.ambient_manifold.metric
-        
         self.sub_coords = sub_coords
-        self.embedding = embedding  # Lista di espressioni simboliche contenente l'immagine vettoriale (in Rm) di una submanifold Sigma^n
+        self.embedding = embedding  # Lista di espressioni simboliche: x_i = f(sub_coords)
         self.dimension = len(sub_coords)
 
         self.embedding_jacobian = None
         self.induced_metric = None
         self.second_fundamental_form = None
         self.mean_curvature = None
+
+        self.metric = None #questo serve per gestire bene l'ereditarietà di certi metodi di Manifold
+        self.coords = self.sub_coords #come ad esempio self.compute_christoffels_symbols()
 
     def compute_embedding_jacobian(self):
         self.embedding_jacobian = Matrix([
@@ -318,8 +318,11 @@ class Submanifold(Manifold):
         g = self.ambient_manifold.metric  # Metrica della varietà ambiente
         self.compute_embedding_jacobian() # Jacobiano dell'immersione
 
-        # Metrica indotta: (Jacobian)^T * g * (Jacobian)
+        # Metrica indotta: G_ab = (Jacobian)^T * g * (Jacobian)
         self.induced_metric = sp.simplify(self.embedding_jacobian.T * g * self.embedding_jacobian)
+        self.metric = self.induced_metric #serve per poterci agire con metodi di Manifold, e.g. compute_christoffel_symbols()
+        #self.coords = self.sub_coords
+
         return self.induced_metric
 
     
