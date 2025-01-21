@@ -295,6 +295,7 @@ class Submanifold(Manifold):
 
         self.embedding_jacobian = None
         self.induced_metric = None
+        self.normal_field = None
         self.second_fundamental_form = None
         self.mean_curvature = None
 
@@ -308,7 +309,6 @@ class Submanifold(Manifold):
             ])
 
         return self.embedding_jacobian
-
 
     def compute_induced_metric(self):
         """
@@ -325,7 +325,120 @@ class Submanifold(Manifold):
 
         return self.induced_metric
 
+
+    def compute_normal_field(self):
+        """
+        Calcola il campo normale della submanifold nell'ambiente.
+        :return: Lista di vettori normali simbolici.
+        """
+        jacobian = self.compute_embedding_jacobian()
+        ambient_metric = self.ambient_manifold.metric
+        # usiamo la metrida euclidea? con hyp non ho risultati reali
+        # ambient_metric = sp.Matrix.eye(self.ambient_manifold.dimension)
+        tangent_vectors = [jacobian[:, i] for i in range(self.dimension)]
+        d = len(self.embedding)
+
+        normal_vectors = [sp.symbols(f'n{i+1}') for i in range(d)]  # Lista di simboli normali
+        # initial_symbols = [sp.symbols(f'n{i+1}') for i in range(d)] #ci serve per dopo nel caso in cui n-k>1
+
+        equations = []
+        # Condizioni di ortogonalità rispetto alla metrica
+        for tangent in tangent_vectors:
+            eq = sum(ambient_metric[i, j] * tangent[i] * normal_vectors[j]
+                    for i in range(d) for j in range(d))
+            equations.append(eq)
+
+        # Normalizzazione: g(N, N) = 1
+        norm_eq = sum(ambient_metric[i, j] * normal_vectors[i] * normal_vectors[j]
+                    for i in range(d) for j in range(d)) - 1
+        equations.append(norm_eq)
+
+        # Risolve il sistema lineare e seleziona il verso giusto
+        solutions = sp.solve(equations, normal_vectors)
+        self.compute_scalar_curvature()
+        if self.scalar_curvature >= 0:
+            self.normal_field = sp.Matrix([solutions[0]])
+        else:
+             self.normal_field = sp.Matrix([solutions[1]]) 
+            
+        #gestione del caso n-k>1: mancante
+        
+        self.normal_field = self.normal_field.subs(sp.I, 1) #normalizza a reali eventuali vettori complessi
+        
+        return sp.simplify(self.normal_field)
+
+
+    def compute_IInd_fundamental_form(self):
+        """
+        Calcola la seconda forma fondamentale per la sottovarietà in un ambiente con connessione in generale non piatta.
+        :return: Matrice simbolica della seconda forma fondamentale.
+        """
+        self.compute_embedding_jacobian()
+        self.ambient_manifold.compute_christoffel_symbols()
+        Gamma = self.ambient_manifold.christoffel_symbols  
+        self.compute_normal_field()
+
+        II = sp.zeros(self.dimension, self.dimension)  
+        tangent_vectors = [self.embedding_jacobian[:, i] for i in range(self.dimension)]
+        coords = self.sub_coords
+
+        num_vectors = len(tangent_vectors) #è la dimensione dell'immagine dell'embedding
+        num_coords = len(coords)
+
+        # Matrice di derivate, dove ogni elemento è un vettore (colonna)
+        derivative_matrix = [[None for _ in range(num_vectors)] for _ in range(num_coords)]
+
+        # Calcolo delle derivate dirette dei vettori tangenti
+        for j, tangent_vector in enumerate(tangent_vectors):  # Itera sui vettori tangenti
+            for i, coord in enumerate(coords):  # Itera sulle coordinate
+                # Calcola la derivata del j-esimo vettore tangente rispetto alla i-esima coordinata
+                derivative_matrix[i][j] = tangent_vector.diff(coord)
+
+        # Correzione della connessione
+        for i in range(self.dimension):  # indice di derivazione
+            for j in range(self.dimension):  # Indice del vettore tangente da derivare
+                # Inizializziamo la derivata covariante
+                nabla_XY = derivative_matrix[i][j]
+                # Inizializzo la derivata covariante come la derivata diretta precedentemente costruita
+
+                # Aggiungo la correzione dei Christoffel
+                christoffel_correction = sp.zeros(len(tangent_vectors[0]), 1)  # Vettore colonna
+                for k in range(len(tangent_vectors[0])):  # Componente del vettore
+                    for m in range(len(tangent_vectors[0])):  # Somma sui vettori tangenti
+                        christoffel_correction[k] += Gamma[k][i, m] * tangent_vectors[j][m]
+
+                # Aggiorna la derivata covariante con la correzione
+                nabla_XY += christoffel_correction
+
+                # Calcola la proiezione su normal_field per la seconda forma fondamentale
+                # II[i, j] = self.normal_field.dot(nabla_XY)
+                II[i, j] = self.ambient_manifold.inner_product(nabla_XY, self.normal_field)
+
+        # Salva e restituisci la seconda forma fondamentale
+        self.second_fundamental_form = sp.simplify(II)
+        return self.second_fundamental_form
+
+    def compute_mean_curvatureII(self):
+        """
+        Calcola la curvatura media della varietà immersa.
+        :param: Normal vector field in forma di vettore sympy
+        :return: Scalare in forma di sympy function o costante
+                Traccia della matrice II
+        """
+        self.compute_IInd_fundamental_form()
+        self.compute_induced_metric()
+
+        I = self.induced_metric.inv()
+        II = self.second_fundamental_form
+        H = 0
+        for a in range(self.dimension):
+            H += I[a, a] * II[a, a]
+
+        self.mean_curvature = sp.simplify(H)
+        return self.mean_curvature
+
     
+    #di seguito dei doppioni con inserimento manuale del normal vector field
     def compute_second_fundamental_form(self, normal_field):
         """
         Calcola la seconda forma fondamentale per la sottovarietà in un ambiente con connessione in generale non piatta.
