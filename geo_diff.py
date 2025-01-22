@@ -1,17 +1,6 @@
 import sympy as sp
 from sympy import Matrix, diff, MutableDenseNDimArray
 
-def print_pretty_matrix(matrix, name="Matrix"):
-    """
-    Stampa una matrice SymPy in modo leggibile.
-
-    Args:
-        matrix: matrice SymPy da stampare.
-        name: nome della matrice da visualizzare.
-    """
-    print(f"{name}:")
-    sp.pprint(matrix, use_unicode=True)
-
 class Manifold:
     def __init__(self, metric, coordinates):
         """
