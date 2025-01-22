@@ -174,9 +174,32 @@ class Manifold:
         self.compute_einstein_tensor()
         return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
 
-    def vacuum_einstein_eqs_without_cosm_const(self):
+    # def vacuum_einstein_eqs_without_cosm_const(self):
+        # self.compute_einstein_tensor()
         # self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
-        return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
+        # return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
+
+
+    def inner_product(self, X, Y):
+        """
+        Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
+
+        :param X: Vettore X (lista o matrice 1D di dimensione n)
+        :param Y: Vettore Y (lista o matrice 1D di dimensione n)
+        :return: Il prodotto scalare g(X, Y)
+        """
+        # Assicuriamoci che X e Y siano nel formato giusto
+        #if len(X) != self.dimension or len(Y) != self.dimension:
+         #   raise ValueError("I vettori X e Y devono essere di dimensione n.")
+
+        # Calcolare il prodotto scalare g(X, Y) = X^T * g * Y
+        inner_product = 0
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                inner_product += self.metric[i, j] * X[i] * Y[j]
+
+        return inner_product
+    
     
 
     def compute_sectional_curvature(self, X, Y):
@@ -219,26 +242,6 @@ class Manifold:
         return self.sectional_curvature
     
 
-    def inner_product(self, X, Y):
-        """
-        Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
-
-        :param X: Vettore X (lista o matrice 1D di dimensione n)
-        :param Y: Vettore Y (lista o matrice 1D di dimensione n)
-        :return: Il prodotto scalare g(X, Y)
-        """
-        # Assicuriamoci che X e Y siano nel formato giusto
-        #if len(X) != self.dimension or len(Y) != self.dimension:
-         #   raise ValueError("I vettori X e Y devono essere di dimensione n.")
-
-        # Calcolare il prodotto scalare g(X, Y) = X^T * g * Y
-        inner_product = 0
-        for i in range(self.dimension):
-            for j in range(self.dimension):
-                inner_product += self.metric[i, j] * X[i] * Y[j]
-
-        return inner_product
-    
 
         def compute_geodesic_equations(self):
         """
@@ -333,8 +336,7 @@ class Submanifold(Manifold):
         """
         jacobian = self.compute_embedding_jacobian()
         ambient_metric = self.ambient_manifold.metric
-        # usiamo la metrida euclidea? con hyp non ho risultati reali
-        # ambient_metric = sp.Matrix.eye(self.ambient_manifold.dimension)
+       
         tangent_vectors = [jacobian[:, i] for i in range(self.dimension)]
         d = len(self.embedding)
 
@@ -353,7 +355,7 @@ class Submanifold(Manifold):
                     for i in range(d) for j in range(d)) - 1
         equations.append(norm_eq)
 
-        # Risolve il sistema lineare e seleziona il verso giusto
+        # Risolve il sistema e seleziona il verso giusto
         solutions = sp.solve(equations, normal_vectors)
         self.compute_scalar_curvature()
         if self.scalar_curvature >= 0:
@@ -364,7 +366,7 @@ class Submanifold(Manifold):
         #gestione del caso n-k>1: mancante
         
         self.normal_field = self.normal_field.subs(sp.I, 1) #normalizza a reali eventuali vettori complessi
-        
+        # questo punto è poco chiaro, non dovrebbe succedere
         return sp.simplify(self.normal_field)
 
 
@@ -414,7 +416,7 @@ class Submanifold(Manifold):
                 # II[i, j] = self.normal_field.dot(nabla_XY)
                 II[i, j] = self.ambient_manifold.inner_product(nabla_XY, self.normal_field)
 
-        # Salva e restituisci la seconda forma fondamentale
+        # Salva e restituisce la seconda forma fondamentale
         self.second_fundamental_form = sp.simplify(II)
         return self.second_fundamental_form
 
@@ -430,14 +432,18 @@ class Submanifold(Manifold):
 
         I = self.induced_metric.inv()
         II = self.second_fundamental_form
-        H = 0
-        for a in range(self.dimension):
-            H += I[a, a] * II[a, a]
-
+        # H = 0
+        # for a in range(self.dimension):
+        #    H += I[a, a] * II[a, a]
+        H = sum(
+            I[a, a] * II[a, a] for a in range(self.dimension)
+        )
         self.mean_curvature = sp.simplify(H)
         return self.mean_curvature
 
-    
+    def is_minimal(self):
+        return self.mean_curvature == 0
+        
     #di seguito dei doppioni con inserimento manuale del normal vector field
     def compute_second_fundamental_form(self, normal_field):
         """
@@ -511,8 +517,6 @@ class Submanifold(Manifold):
         return self.mean_curvature
 
 
-    def is_minimal(self):
-        return self.mean_curvature == 0
 
 
 
