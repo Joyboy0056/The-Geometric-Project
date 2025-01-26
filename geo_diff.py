@@ -15,12 +15,13 @@ class Manifold:
         
         self.christoffel_symbols = None
         self.riemann_tensor = None
+        self.covariant_riemann = None
         self.ricci_tensor = None
         self.scalar_curvature = None
         self.einstein_tensor = None
         self.sectional_curvature = None
         self.geodesics = None
-
+        self.kretschmann_scalar = None
 
     def compute_christoffel_symbols(self):
         """
@@ -81,9 +82,39 @@ class Manifold:
         self.riemann_tensor = sp.simplify(Riemann_tensor)
         return self.riemann_tensor
 
+
+    def is_flat(self):
+        self.compute_riemann_tensor()
+        n = self.dimension
+        return self.riemann_tensor == sp.MutableDenseNDimArray.zeros(n, n, n, n)
+
+    def compute_covariant_riemann(self):
+        """
+                Calcola il Riemann completamente covariante.
+                R_ρσμν = g_λρ R^λ_σμν
+                """
+        self.compute_riemann_tensor()
+
+        cov_riemann = MutableDenseNDimArray.zeros(
+            self.dimension, self.dimension, self.dimension, self.dimension)
+
+        for rho in range(self.dimension):
+            for sigma in range(self.dimension):
+                for mu in range(self.dimension):
+                    for nu in range(self.dimension):
+                        cov_riemann[rho, sigma, mu, nu] = sum(
+                            self.metric[rho,lamb] * self.riemann_tensor[lamb, sigma, mu, nu]
+                            for lamb in range(self.dimension)
+                        )
+        self.covariant_riemann = sp.simplify(cov_riemann)
+        return self.covariant_riemann
+
+    
+
     def compute_ricci_tensor(self):
         """
         Calcola il tensore di Ricci.
+        R_μν = R^ρ_μρν
         """
         self.compute_riemann_tensor()
 
@@ -91,6 +122,27 @@ class Manifold:
         for mu in range(self.dimension):
             for nu in range(self.dimension):
                 ricci_tensor[mu, nu] = sum(self.riemann_tensor[rho, mu, rho, nu] for rho in range(self.dimension))
+
+        self.ricci_tensor = sp.simplify(sp.Matrix(ricci_tensor))
+        return self.ricci_tensor
+
+
+    def compute_ricci_tensor2(self):
+        """
+        Calcola il tensore di Ricci.
+        R_μν = g^ab R_aμbν
+        """
+        #self.compute_christoffel_symbols()
+        self.compute_covariant_riemann()
+        g_inv = self.metric.inv()
+
+        ricci_tensor = sp.MutableDenseNDimArray.zeros(self.dimension, self.dimension)
+        for mu in range(self.dimension):
+            for nu in range(self.dimension):
+                ricci_tensor[mu, nu] = sum(
+                    g_inv[a, b] * self.covariant_riemann[a, mu, b, nu]
+                    for a in range(self.dimension) for b in range(self.dimension)
+                )
 
         self.ricci_tensor = sp.simplify(sp.Matrix(ricci_tensor))
         return self.ricci_tensor
@@ -111,6 +163,40 @@ class Manifold:
         return self.scalar_curvature #forse potevo direttamente fare
                                      # return self.ricci_tensor.trace (?)
 
+
+    def compute_kretschmann_scalar(self):
+        """
+        Calcola l'invariante di Kretschmann R_ρσμν*R^ρσμν
+        """
+        self.compute_riemann_tensor()
+        g_inv = self.metric.inv()
+        self.compute_covariant_riemann()
+
+        # Costruisco il Riemann completamente controvariante
+        contra_riemann = MutableDenseNDimArray.zeros(
+            self.dimension, self.dimension, self.dimension, self.dimension)
+        for rho in range(self.dimension):
+            for sigma in range(self.dimension):
+                for mu in range(self.dimension):
+                    for nu in range(self.dimension):
+                        contra_riemann[rho, sigma, mu, nu] = sum(
+                            g_inv[a, sigma] * g_inv[b, mu] * g_inv[c, nu] * self.riemann_tensor[rho, a, b, c]
+                            for a in range(self.dimension)
+                            for b in range(self.dimension)
+                            for c in range(self.dimension)
+                        )
+        contra_riemann = sp.simplify(contra_riemann)
+
+        # Costruisco l'invariante di Kretschmann
+        K = sum(self.covariant_riemann[rho, sigma, mu, nu] * contra_riemann[rho, sigma, mu, nu]
+                            for rho in range(self.dimension)
+                            for sigma in range(self.dimension)
+                            for mu in range(self.dimension)
+                            for nu in range(self.dimension)
+                        )
+        self.kretschmann_scalar = sp.simplify(K)
+        return self.kretschmann_scalar
+        
 
     def create_spacetime_metric(self, scale_factor):
         """
