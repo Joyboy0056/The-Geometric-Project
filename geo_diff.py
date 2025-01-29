@@ -318,7 +318,7 @@ class Manifold:
     
 
 
-        def compute_geodesic_equations(self):
+    def compute_geodesic_equations(self):
         """
         Calcola simbolicamente le equazioni geodetiche per la varietà.
 
@@ -356,6 +356,15 @@ class Manifold:
         #       one can script "latex(self.geodesics[j])" for some j, 
         #       to get the latex code for an even better visualization.
 
+    def display_geodesic_equations(self):
+        self.compute_geodesic_equations()
+        eqs_list = []
+        for i, coord in enumerate(self.coords):
+            eqs_list.append(self.geodesics[i])
+            print(f"\nGeodesic equation along {coord}:")
+            sp.pprint(eqs_list[i])  # Stampa leggibile in console
+            print("\nLaTeX format:")
+            print(f'{sp.printing.latex(eqs_list[i])}')  # Output LaTeX-friendly
 
 
 class Submanifold(Manifold):
