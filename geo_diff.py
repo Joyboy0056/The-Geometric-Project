@@ -172,6 +172,7 @@ class Manifold:
 
         self.ricci_tensor = sp.simplify(sp.Matrix(ricci_tensor))
         return self.ricci_tensor
+        
 
     def compute_scalar_curvature(self):
         """
@@ -186,8 +187,7 @@ class Manifold:
         )
 
         self.scalar_curvature = sp.simplify(scalar_curvature)
-        return self.scalar_curvature #forse potevo direttamente fare
-                                     # return self.ricci_tensor.trace (?)
+        return self.scalar_curvature 
 
 
     def compute_kretschmann_scalar(self):
@@ -275,10 +275,6 @@ class Manifold:
         self.compute_einstein_tensor()
         return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
 
-    # def vacuum_einstein_eqs_without_cosm_const(self):
-        # self.compute_einstein_tensor()
-        # self.einstein_tensor = sp.simplify(self.compute_einstein_tensor())
-        # return self.einstein_tensor == sp.zeros(self.dimension, self.dimension)
 
 
     def inner_product(self, X, Y):
@@ -377,10 +373,7 @@ class Manifold:
 
         self.geodesics = geodesic_equations
         return self.geodesics
-        # NOTA: one can use sp.pprint for a good formatting
-        #       also, through "from sympy.printing.latex import latex"
-        #       one can script "latex(self.geodesics[j])" for some j, 
-        #       to get the latex code for an even better visualization.
+        
 
     def display_geodesic_equations(self):
         self.compute_geodesic_equations()
