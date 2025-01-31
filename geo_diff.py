@@ -109,6 +109,32 @@ class Manifold:
         self.covariant_riemann = sp.simplify(cov_riemann)
         return self.covariant_riemann
 
+
+    def compute_sectional_curvature_matrix(self):
+        """
+        Calcola la matrice S_ij = R_ijij/(g_ii g_jj-g_ij^2)
+            delle curvature sezionali rispetto ai piani coordinati (i,j)
+        Il caso della diagonale i=j non individua nessun piano ed è 
+            gestito dalla funzione ponendo S_ii = 0. 
+        """
+        self.compute_covariant_riemann()
+        R = self.covariant_riemann
+        g = self.metric
+        n = self.dimension
+        S = MutableDenseNDimArray.zeros(n, n)
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    S[i, j] += R[i, j, i, j] / (g[i, i] * g[j, j] - g[i, j]**2)
+
+        return S
+
+    def print_sectional_curvatures(self):
+        S = self.compute_sectional_curvature_matrix()
+        for i, coord1 in enumerate(self.coords):
+            for j, coord2 in enumerate(self.coords):
+                if i < j:
+                    print(f'Sectional curvature in the plane (∂{coord1},∂{coord2}): K_{coord1}{coord2}:', S[i, j])
     
 
     def compute_ricci_tensor(self):
