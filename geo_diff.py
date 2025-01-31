@@ -477,13 +477,15 @@ class Submanifold(Manifold):
 
         # Risolve il sistema e seleziona il verso giusto
         solutions = sp.solve(equations, normal_vectors)
-        self.compute_scalar_curvature()
-        if self.scalar_curvature >= 0:
-            self.normal_field = sp.Matrix([solutions[0]])
-        else:
-             self.normal_field = sp.Matrix([solutions[1]]) 
+        # self.compute_scalar_curvature()
+        # if self.scalar_curvature >= 0:
+        #     self.normal_field = sp.Matrix([solutions[0]])
+        # else:
+        #      self.normal_field = sp.Matrix([solutions[1]]) 
             
         #gestione del caso n-k>1: mancante
+
+        self.normal_field = sp.Matrix([solutions[0]])
         
         self.normal_field = self.normal_field.subs(sp.I, 1) #normalizza a reali eventuali vettori complessi
         # questo punto è poco chiaro, non dovrebbe succedere
