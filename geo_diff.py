@@ -386,6 +386,23 @@ class Manifold:
             print(f'{sp.printing.latex(eqs_list[i])}')  # Output LaTeX-friendly
 
 
+
+    def kulkarni_nomizu(self, A, B):
+        """
+        Compute Kulkarni-Nomizu product of two symmetric (0,2)-tensors as
+            (A\owedge B)_ijkl = A_ik B_jl + A_jl B_ik - A_il B_jk - A_jk B_il
+        """
+        n = self.dimension
+        AnomB = MutableDenseNDimArray.zeros(n, n, n, n)
+        for i in range(n):
+            for j in range(n):
+                for k in range(n):
+                    for l in range(n):
+                        AnomB[i, j, k, l] += A[i, k] * B[j, l] + A[j, l] * B[i, k] - A[i, l] * B[j, k] - A[j, k] * B[i, l]
+                        
+        return sp.simplify(AnomB)
+
+
 class Submanifold(Manifold):
     def __init__(self, ambient_manifold, sub_coords, embedding):
         """
