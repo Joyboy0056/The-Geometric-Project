@@ -652,6 +652,11 @@ class Submanifold(Manifold):
 
     def is_minimal(self):
         return self.mean_curvature == 0
+
+    def is_totally_geodesic(self):
+        n = self.dimension
+        self.compute_IInd_fundamental_form()
+        return self.second_fundamental_form == sp.Matrix.zeros(n, n)
         
     #di seguito dei doppioni con inserimento manuale del normal vector field
     def compute_second_fundamental_form(self, normal_field):
