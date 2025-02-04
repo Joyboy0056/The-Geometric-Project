@@ -416,6 +416,80 @@ class Manifold:
         return sp.simplify(nabla_XT)
 
 
+    def gradient(self, f):
+        """
+        Compute the gradient "X = grad_g(f)" of a scalar function f:(M,g) --> R
+        being X = g^ij ∂_i(f) ∂_j
+
+        :param f: sympy function sp.Function('f')('x^1 ... x^n'), 
+                     where x^j = sp.symbols('x^j') 
+                     and self.coords = [x^1 ... x^n].
+        """
+        g_inv = self.metric.inv()
+        n = self.dimension
+        X = sp.Matrix.zeros(n, 1)
+        for j in range(n):
+            X[j] = sum(
+                g_inv[i, j] * sp.diff(f, self.coords[i])
+                for i in range(n)
+            )
+
+        return sp.simplify(X)
+    
+    def divergence(self, X):
+        """
+        Compute the divergence "div_g(X)" of a vector field X:(M,g) --> TM
+        """
+        n = self.dimension
+        delta = sp.Matrix.eye(n)
+        Gamma = self.compute_christoffel_symbols()
+
+        divX = sum(
+                delta[mu, nu] * (sp.diff(X[nu], self.coords[mu]) + Gamma[nu][mu, lamb] * X[lamb])               
+                for mu in range(n) for nu in range(n) for lamb in range(n)
+                )
+        return sp.simplify(divX) 
+    
+    def divergence2(self, X):
+        n = self.dimension
+        g = sp.det(self.metric)
+        div = sum(
+            1/sp.sqrt(g) * sp.diff(sp.sqrt(g)*X[i], self.coords[i])
+            for i in range(n)
+        )
+        return sp.simplify(div) 
+
+    def laplacian(self, f):
+        """Compute the laplacian of f as the divergence of the gradient
+            i.e. Δ_g(f) = div_g(grad_g(f)) """
+        return self.divergence(self.gradient(f))
+    
+
+    def hessian(self, f):
+        """Compute the Hessian matrix of a function f as ∇df """
+        n = self.dimension
+        Gamma = self.compute_christoffel_symbols()
+        Hess = MutableDenseNDimArray.zeros(n, n)
+        for i in range(n):
+            for j in range(n):
+                Hess[i, j] = sum(
+                    sp.diff(f, self.coords[i], self.coords[j]) - Gamma[k][i, j] * sp.diff(f, self.coords[k])
+                    for k in range(n)
+                )
+        return sp.simplify(Hess)
+    
+    def laplacian1(self, f):
+        n = self.dimension
+        Hess = self.hessian(f)
+        g_inv = self.metric.inv()
+        lapl = sum(
+            g_inv[i, j] * Hess[i, j]
+            for i in range(n) for j in range(n)
+        )
+        return sp.simplify(lapl)
+        
+
+
 class Submanifold(Manifold):
     def __init__(self, ambient_manifold, sub_coords, embedding):
         """
