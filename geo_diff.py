@@ -19,7 +19,7 @@ class Manifold:
         self.ricci_tensor = None
         self.scalar_curvature = None
         self.einstein_tensor = None
-        self.sectional_curvature = None
+        self.sectional_curvatures = None
         self.geodesics = None
         self.kretschmann_scalar = None
 
@@ -126,15 +126,16 @@ class Manifold:
             for j in range(n):
                 if i != j:
                     S[i, j] += R[i, j, i, j] / (g[i, i] * g[j, j] - g[i, j]**2)
-
-        return S
+        
+        self.sectional_curvatures = sp.simplify(S)
+        return self.sectional_curvatures
 
     def print_sectional_curvatures(self):
-        S = self.compute_sectional_curvature_matrix()
+        self.compute_sectional_curvature_matrix()
         for i, coord1 in enumerate(self.coords):
             for j, coord2 in enumerate(self.coords):
                 if i < j:
-                    print(f'Sectional curvature in the plane (∂{coord1},∂{coord2}): K_{coord1}{coord2}:', S[i, j])
+                    print(f'Sectional curvature in the plane (∂{coord1},∂{coord2}): K_{coord1}{coord2}:', self.sectional_curvatures[i, j])
     
 
     def compute_ricci_tensor(self):
@@ -276,7 +277,6 @@ class Manifold:
         return self.einstein_tensor + Lambda * self.metric == sp.zeros(self.dimension, self.dimension)
 
 
-
     def inner_product(self, X, Y):
         """
         Calcola il prodotto scalare g(X, Y) tra due vettori X e Y utilizzando la metrica g.
@@ -296,48 +296,6 @@ class Manifold:
                 inner_product += self.metric[i, j] * X[i] * Y[j]
 
         return inner_product
-    
-    
-
-    def compute_sectional_curvature(self, X, Y):
-        """
-        Calcola la curvatura sezionale per un piano definito dai vettori tangenti X e Y.
-
-        :param X: Vettore tangente X (lista o matrice 1D di dimensione n).
-        :param Y: Vettore tangente Y (lista o matrice 1D di dimensione n).
-        :return: Valore della curvatura sezionale K(X, Y).
-        """
-        if len(X) != self.dimension or len(Y) != self.dimension:
-            raise ValueError("I vettori X e Y devono avere la stessa dimensione delle coordinate della varietà.")
-
-        self.compute_riemann_tensor()
-
-        # Calcola il numeratore: R(X, Y, X, Y)
-        R_XYXY = 0
-        for mu in range(self.dimension):
-            for nu in range(self.dimension):
-                for sigma in range(self.dimension):
-                    for rho in range(self.dimension):
-                        R_XYXY += (
-                                self.riemann_tensor[mu, nu, sigma, rho] * X[mu] * Y[nu] * X[sigma] * Y[rho]
-                        )
-
-        # Calcola il denominatore: ||X ∧ Y||^2 = g(X, X)g(Y, Y) - g(X, Y)^2
-        g_XX = self.inner_product(X, X)
-        g_YY = self.inner_product(Y, Y)
-        g_XY = self.inner_product(X, Y)
-
-        wedge_norm_squared = g_XX * g_YY - g_XY ** 2
-
-        if wedge_norm_squared == 0:
-            raise ValueError("I vettori X e Y non definiscono un piano valido (sono linearmente dipendenti).")
-
-        # Calcola la curvatura sezionale
-        sectional_curvature = R_XYXY / wedge_norm_squared
-        self.sectional_curvature = sp.simplify(sectional_curvature)
-
-        return self.sectional_curvature
-    
 
 
     def compute_geodesic_equations(self):
@@ -401,6 +359,61 @@ class Manifold:
                         AnomB[i, j, k, l] += A[i, k] * B[j, l] + A[j, l] * B[i, k] - A[i, l] * B[j, k] - A[j, k] * B[i, l]
                         
         return sp.simplify(AnomB)
+
+
+    def covariant_derivative(self, X, T, ind):
+        """
+        Compute the covariant derivative nabla_X T, where T is a generic (h,k) tensor
+            X = X^l ∂_l and e.g. T = T^k_ij ∂_k dx^i dx^j
+            ∇_X T = X^l(∂_l(T^k_ij) - Γ^m_li T^k_mj - Γ^m_lj T^k_im + Γ^k_lm T^m_ij)dx^i dx^j ∂_k
+                i.e. (∇_l T)^k_ij = ∂_l(T^k_ij) - Γ^m_li T^k_mj - Γ^m_lj T^k_im + Γ^k_lm T^m_ij
+
+        :param X: vector field given the direction where the derivation is computed
+        :param T: tensor field on which the derivation acts
+        :param ind: tuple (h, k) for the type of T
+        """
+        self.compute_christoffel_symbols()
+        Gamma = self.christoffel_symbols
+        n = self.dimension
+        h, k = ind[0], ind[1]
+
+        if h == 1 and k == 0: 
+            nabla_XT = sp.Matrix.zeros(n, 1)
+            for k in range(n):
+                for i in range(n):
+                    nabla_XT[k] =  sum(
+                        X[i] * sp.diff(T[k], self.coords[i]) + Gamma[k][i, j] * T[j]
+                        for j in range(n)
+                        )
+                    
+        elif h == 0 and k == 1: 
+            nabla_XT = sp.Matrix.zeros(n, 1)
+            for j in range(n):
+                for i in range(n):
+                    nabla_XT[j] =  sum(
+                        X[i] * sp.diff(T[j], self.coords[i]) - Gamma[k][i, j] * T[k]
+                        for k in range(n)
+                        )
+                    
+        #elif h == 2 and k == 0:
+        #elif h == 0 and k == 2:
+        elif h == 1 and k == 2:
+            # ∇_X T = X^l(∂_l(T^k_ij) - Γ^m_li T^k_mj - Γ^m_lj T^k_im + Γ^k_lm T^m_ij)dx^i dx^j ∂_k
+            nabla_XT = MutableDenseNDimArray.zeros(n, n, n)
+            for i in range(n):
+                for j in range(n):
+                    for k in range(n):
+                        for l in range(n):
+                            nabla_XT[k, i, j] = sum(
+                                X[l] * (sp.diff((T), self.coords[l]) - Gamma[m][l, i] * T[k, m, j] - Gamma[m][l, j] * T[k, i, m] + Gamma[k][l, m] * T[m, i, j])
+                                for m in range(n) 
+                            )
+
+        #elif h == 2 and k == 1:
+        else:
+            raise f'This method has not been yet extended to this higher-order tensor field T = {sp.pprint(T)}'
+        
+        return sp.simplify(nabla_XT)
 
 
 class Submanifold(Manifold):
