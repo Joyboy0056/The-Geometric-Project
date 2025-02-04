@@ -478,7 +478,7 @@ class Manifold:
                 )
         return sp.simplify(Hess)
     
-    def laplacian1(self, f):
+    def laplacian2(self, f):
         n = self.dimension
         Hess = self.hessian(f)
         g_inv = self.metric.inv()
