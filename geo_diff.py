@@ -135,7 +135,7 @@ class Manifold:
         for i, coord1 in enumerate(self.coords):
             for j, coord2 in enumerate(self.coords):
                 if i < j:
-                    print(f'Sectional curvature in the plane (∂{coord1},∂{coord2}): K_{coord1}{coord2}:', self.sectional_curvatures[i, j])
+                    print(f'Sectional curvature in the plane (∂{coord1},∂{coord2}): K_{coord1}{coord2} =', self.sectional_curvatures[i, j])
     
 
     def compute_ricci_tensor(self):
