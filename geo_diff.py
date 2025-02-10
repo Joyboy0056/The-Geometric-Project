@@ -1,6 +1,12 @@
 import sympy as sp
 from sympy import Matrix, diff, MutableDenseNDimArray
 
+import sympy as sp
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
 class Manifold:
     def __init__(self, metric, coordinates):
         """
@@ -732,5 +738,37 @@ class Submanifold(Manifold):
 
 
 
+    def plot_surface(self, domain):
+        """:param domain: it's a list made of 2 tuples giving the intervals of the variables parametrizing the surface"""
+        
+        coords = self.sub_coords
+        x, y, z = self.embedding[0], self.embedding[1], self.embedding[2]
+        
+        func = [sp.lambdify((coords[0], coords[1]), coord, 'numpy') for coord in [x, y, z]]
+
+        # Creiamo la meshgrid per le coordinate
+        a1, b1, a2, b2 = domain[0][0], domain[0][1], domain[1][0], domain[1][1]
+        u = np.linspace(a1, b1, 100)
+        v = np.linspace(a2, b2, 100)
+        U, V = np.meshgrid(u, v)
+
+        # Valutiamo le coordinate cartesiane
+        Func = [c(U, V) for c in func]
+
+        # Plot
+        fig = plt.figure(figsize=(6,6))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.9, shade=True)
+
+        # Etichette degli assi
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+        #ax.set_title('abcsda', fontsize=14)
+
+        # Rimuoviamo i gridlines per un aspetto più pulito
+        ax.grid(False)
+
+        return plt.show()
 
 
