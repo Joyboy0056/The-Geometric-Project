@@ -348,6 +348,60 @@ class Manifold:
             print(f'{sp.printing.latex(eqs_list[i])}')  # Output LaTeX-friendly
 
 
+    def geodesic_system(self, lambda_, Y):
+        """
+        Sistema differenziale del primo ordine per le equazioni geodetiche.
+        
+        - lambda_: parametro affine
+        - Y: array contenente [x^i, v^i]
+        - manifold: istanza di Manifold o Submanifold
+        """
+        dim = self.dimension
+        coords = self.coords  # variabili x^i simboliche
+        christoffels = self.compute_christoffel_symbols()  # array di simboli di Christoffel
+        
+        # Separiamo le coordinate e le velocità
+        x_vals = Y[:dim]
+        v_vals = Y[dim:]
+        
+        # Convertiamo le espressioni simboliche in funzioni numeriche
+        subs_dict = dict(zip(coords, x_vals))  # sostituzione delle coordinate attuali
+        christoffels_numeric = np.array([
+            [[float(sp.N(christoffels[i][j, k].subs(subs_dict))) for k in range(dim)] 
+            for j in range(dim)] for i in range(dim)
+        ])
+        
+        # Calcoliamo dv^i/dlambda = -Γ^i_{jk} v^j v^k
+        dv_vals = np.zeros(dim)
+        for i in range(dim):
+            dv_vals[i] = -sum(christoffels_numeric[i][j, k] * v_vals[j] * v_vals[k] for j in range(dim) for k in range(dim))
+        
+        return np.concatenate([v_vals, dv_vals])
+
+    # Funzione per integrare le geodetiche
+    def solve_geodesic(self, initial_position, initial_velocity, lambda_span, num_points=100):
+        """
+        Risolve numericamente le equazioni geodetiche.
+        
+        - manifold: istanza di Manifold o Submanifold
+        - initial_position: condizioni iniziali sulle coordinate
+        - initial_velocity: condizioni iniziali sulle derivate
+        - lambda_span: tuple (lambda_iniziale, lambda_finale)
+        - num_points: numero di punti per la soluzione
+        """
+        y0 = np.concatenate([initial_position, initial_velocity])
+        
+        sol = solve_ivp(
+            fun=lambda l, Y: self.geodesic_system(l, Y),
+            t_span=lambda_span,
+            y0=y0,
+            method='RK45',  # Runge-Kutta di ordine 4-5
+            t_eval=np.linspace(lambda_span[0], lambda_span[1], num_points)
+        )
+        
+        return sol
+
+
 
     def kulkarni_nomizu(self, A, B):
         """
@@ -735,7 +789,6 @@ class Submanifold(Manifold):
         return self.mean_curvature
 
 
-
     def plot_surface(self, domain):
         """:param domain: it's a list made of 2 tuples giving the intervals of the variables parametrizing the surface"""
         
@@ -766,6 +819,55 @@ class Submanifold(Manifold):
 
         # Rimuoviamo i gridlines per un aspetto più pulito
         ax.grid(False)
+
+        return plt.show()   
+
+
+    def plot_geodesics_on_surface(self, domain, geodesics):
+        """
+        Plotta la superficie immersa in R3 e le geodetiche sopra di essa.
+
+        :param domain: Lista con due tuple che danno gli intervalli delle coordinate parametrizzanti la submanifold.
+        :param geodesics: Lista di soluzioni numeriche delle equazioni geodetiche.
+        """
+
+        coords = self.sub_coords
+        x, y, z = self.embedding[0], self.embedding[1], self.embedding[2]
+
+        # Funzioni di embedding lambda per valutare le coordinate 3D
+        func = [sp.lambdify((coords[0], coords[1]), coord, 'numpy') for coord in [x, y, z]]
+
+        # Creiamo la meshgrid per la superficie
+        a1, b1, a2, b2 = domain[0][0], domain[0][1], domain[1][0], domain[1][1]
+        u = np.linspace(a1, b1, 100)
+        v = np.linspace(a2, b2, 100)
+        U, V = np.meshgrid(u, v)
+
+        # Valutiamo l'immersione nello spazio 3D
+        Func = [c(U, V) for c in func]
+
+        # Creazione della figura
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot della superficie
+        ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.6, shade=True)
+
+        # Plot delle geodetiche
+        for sol in geodesics:
+            u_vals, v_vals = sol.y[0], sol.y[1]  # Coordinate sulla submanifold
+
+            # Mappiamo le coordinate della geodetica nell'immersione 3D
+            x_vals = func[0](u_vals, v_vals)
+            y_vals = func[1](u_vals, v_vals)
+            z_vals = func[2](u_vals, v_vals)
+
+            ax.plot(x_vals, y_vals, z_vals, color='r', linewidth=2)
+
+        # Etichette degli assi
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
 
         return plt.show()
 
