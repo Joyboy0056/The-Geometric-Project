@@ -7,22 +7,22 @@ In this repository you can find my [Manifold and Submanifold class](https://gith
 ---
 
 ### Briefs geo-diff notes
-Le geodetiche di una varietà $(M^n,g)$ sono curve della forma $\tau\mapsto\left(x^1(\tau),...,x^n(\tau)\right),$ soluzioni della seguente equazione differenziale:
+Geodesics of a manifold $(M^n,g)$ are curves of the form $\tau\mapsto\left(x^1(\tau),...,x^n(\tau)\right),$  which are solutions of the following differential equation: 
 
 $\sum_{\nu,\lambda=1}^n\frac{d^2x^\mu}{d\tau^2}+\Gamma^\mu_{\nu\lambda}\frac{d x^\nu}{d\tau}\frac{d x^\lambda}{d\tau}=0,$ per ogni $\mu=1,...,n$
 
-Dove:
+Where:
 
-- $x^\mu$ sono coordinate locali sulla varietà.
-- $\Gamma^\mu_{\nu\lambda}$ sono i simboli di Christoffel della! connessione di Levi-Civita sulla varietà.
-- $\tau$ è il parametro affine (lunghezza d'arco) lungo una curva sulla varietà.
+- $x^\mu$ are local coordinates on the manifold.
+- $\Gamma^\mu_{\nu\lambda}$ are the Christoffel symbols of the Levi-Civita connection on the manifold.
+- $\tau$ is the affine parameter (arc length) along a curve on the manifold.
 
-Esse sono in un certo senso intrinseche, nel senso che dipendono dalla metrica $g\in T^*M\odot T^*M$, la quale è indipendente dalle coordinate rispetto alla quale viene descritta come $g=g_{\mu\nu}dx^\mu\odot dx^\nu$, in notazione di Einstein.
+Geodesics are intrinsic in a certain sense, meaning that they depend on the metric $g\in T^*M\odot T^*M$, which is independent of the coordinates in which it is expressed, given by $g=g_{\mu\nu}dx^\mu\odot dx^\nu$, in Einstein notation.
 
-Generalmente, le componenti di una metrica $g$ su $M^n$ sono calcolate attraverso il pull-back da un ambiente, di solito Euclideo: ad esempio, se esiste un embedding $F:M^n\hookrightarrow\mathbb{R}^m$, con $\mathbf{\delta}=\delta_{ab}dx^a\odot dx^b$ la metrica Euclidea standard, allora $g="J_F^T\cdot J_F"=\delta_{ab}\frac{\partial F^a}{\partial x^\mu}\frac{\partial F^b}{\partial x^\nu} dx^\mu\odot dx^\nu$. In altre parole, $g$ è il pull-back di $\mathbf{\delta}$ tramite la parametrizzazione $F$.
+In general, the components of a metric $g$ on $M^n$ are computed via pullback from an ambient space, usually Euclidean. For instance, if there exists an embedding $F:M^n\hookrightarrow\mathbb{R}^m$, with $\mathbf{\delta}=\delta_{ab}dx^a\odot dx^b$ being the standard Euclidean metric, then $g="J_F^T\cdot J_F"=\delta_{ab}\frac{\partial F^a}{\partial x^\mu}\frac{\partial F^b}{\partial x^\nu} dx^\mu\odot dx^\nu$. In other words, $g$ is the pullback of $\delta$ through the parameterization $F$.
 
-I simboli di Christoffel si calcolano attraverso la formula $\Gamma^\rho_{\mu\nu}=\frac{1}{2}\sum_{\lambda}g^{\rho\lambda}\left(\partial_\nu g_{\mu\lambda}+\partial_\mu g_{\nu\lambda}-\partial_\lambda g_{\mu\nu}\right)$, dai quali si può calcolare il tensore di curvatura di Riemann $\mathbf{Riem}=\sum_{\rho,\sigma,\mu,\nu}R^\rho_{\sigma\mu\nu}\partial_\rho\otimes dx^\sigma\otimes dx^\mu\otimes dx^\nu$ di componenti 
-$R^\rho_{\sigma\mu\nu}=\sum_\lambda \partial_\mu\Gamma^\rho_{\nu\sigma}-\partial_\nu\Gamma^\rho_{\mu\sigma}+\Gamma^\rho_{\mu\lambda}\Gamma^\lambda_{\nu\sigma}+\Gamma^\rho_{\nu\lambda}\Gamma^\lambda_{\mu\sigma}$. Esso è l'oggetto più generale che descrive la curvatura di una metrica $g$ e possiede varie tracce non banali, tra cui il Ricci $\mathbf{Ric}=\sum_{\rho,\mu,\nu}\overbrace{R^\rho_{\mu\rho\nu}}^{=:R_{\mu\nu}} dx^\mu\odot dx^\nu$ e la curvatura scalare $\mathbf{R}=\sum_{\mu,\nu}g^{\mu\nu}R_{\mu\nu}$. Nel caso $n=2$, $\mathbf{Riem}$ è completamente determinato dalla curvatura scalare $\mathbf{R}$, mentre per $n=3$ dal Ricci $\mathbf{Ric}$.
+The Christoffel symbols are computed using the formula $\Gamma^\rho_{\mu\nu}=\frac{1}{2}\sum_{\lambda}g^{\rho\lambda}\left(\partial_\nu g_{\mu\lambda}+\partial_\mu g_{\nu\lambda}-\partial_\lambda g_{\mu\nu}\right)$, from which the Riemann curvature tensor can be determined as $\mathbf{Riem}=\sum_{\rho,\sigma,\mu,\nu}R^\rho_{\sigma\mu\nu}\partial_\rho\otimes dx^\sigma\otimes dx^\mu\otimes dx^\nu$ where its components are given by
+$R^\rho_{\sigma\mu\nu}=\sum_\lambda \partial_\mu\Gamma^\rho_{\nu\sigma}-\partial_\nu\Gamma^\rho_{\mu\sigma}+\Gamma^\rho_{\mu\lambda}\Gamma^\lambda_{\nu\sigma}+\Gamma^\rho_{\nu\lambda}\Gamma^\lambda_{\mu\sigma}$. This is the most general object describing the curvature of a metric $g$, and it possesses various nontrivial traces, including the Ricci tensor $\mathbf{Ric}=\sum_{\rho,\mu,\nu}\overbrace{R^\rho_{\mu\rho\nu}}^{=:R_{\mu\nu}} dx^\mu\odot dx^\nu$ and the Ricci scalar (or scalar curvature) $\mathbf{R}=\sum_{\mu,\nu}g^{\mu\nu}R_{\mu\nu}$. In the case $n=2$, the Riemann tensor $\mathbf{Riem}$ is entirely determined by the scalar curvature $\mathbf{R}$, while for $n=3$ it is determined by the Ricci tensor $\mathbf{Ric}$. There are also other nontrivial traces of the Riemann tensor that are significant in higher dimensions, one of the most fundamental being the Kretschmann invariant $\mathbf{K}=\sum_{\mu,\nu,\rho,\sigma}R_{\mu\nu\rho\sigma}R^{\mu\nu\rho\sigma}$.
 
 
 
