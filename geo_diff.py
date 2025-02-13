@@ -136,7 +136,10 @@ class Manifold:
         return self.sectional_curvatures
 
     def print_sectional_curvatures(self):
-        self.get_sectional_curvature_matrix()
+        """Prints the sectional curvatures of the Manifold. 
+            It needs that they have been computed before 
+             by self.get_sectional_curvatures_matrix()"""
+        #self.get_sectional_curvatures_matrix()
         for i, coord1 in enumerate(self.coords):
             for j, coord2 in enumerate(self.coords):
                 if i < j:
@@ -199,7 +202,8 @@ class Manifold:
         """
         self.get_riemann_tensor()
         g_inv = self.metric.inv()
-        self.get_covariant_riemann()
+        #self.get_covariant_riemann()
+        self.get_sectional_curvature_matrix() #questo calcola anche il covariant Riemann
 
         # Costruisco il Riemann completamente controvariante
         contra_riemann = MutableDenseNDimArray.zeros(
@@ -331,7 +335,10 @@ class Manifold:
         return self.geodesics
 
     def display_geodesic_equations(self):
-        self.get_geodesic_equations()
+        """Prints the geodesics equations of the Manifold. 
+            It needs that they have been computed before 
+             by self.get_geodesic_equations()"""
+        #self.get_geodesic_equations()
         eqs_list = []
         for i, coord in enumerate(self.coords):
             eqs_list.append(self.geodesics[i])
@@ -543,6 +550,11 @@ class Manifold:
 
 
 
+    def get_geometrics(self):
+        """Compute the main geometric objects of a (sub)manifold"""
+        self.get_einstein_tensor() #computed: christoffels, riemann, ricci, scalar, einstein
+        self.get_kretschmann_scalar() #computed: covariant riemann, sectional curvatures, kretschmann
+        self.get_geodesic_equations()
 
 
 
@@ -907,8 +919,8 @@ class Submanifold(Manifold):
 
 
 
-    def get_geometrics(self):
-        """Compute the main geometric objects of a manifold"""
+    def get_geometrics_sub(self):
+        """Compute the main geometric objects of a (sub)manifold"""
         self.get_induced_metric()
         self.get_einstein_tensor()
         self.get_kretschmann_scalar()
