@@ -828,10 +828,9 @@ class Submanifold(Manifold):
 
         # Plot
         fig = plt.figure(figsize=(6, 6))
-        plt.title(fig_title)
-        fig.canvas.manager.set_window_title('Surface plot')
 
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_title(fig_title, fontsize=14)
 
         if flg_null != None:
             ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.9, shade=True)
@@ -842,8 +841,7 @@ class Submanifold(Manifold):
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
-        # ax.set_title('abcsda', fontsize=14)
-
+        
         # Rimuoviamo i gridlines per un aspetto più pulito
         #ax.grid(False)
         #plt.axis('off')
@@ -885,36 +883,35 @@ class Submanifold(Manifold):
                 Func[flg_null] = np.zeros_like(Func[flg_null-1])
                 
 
-        # Creazione della figura
+        # Plot
         fig = plt.figure(figsize=(6, 6))
-        plt.title(fig_title)
-        fig.canvas.manager.set_window_title('Geodesic plot')
 
         ax = fig.add_subplot(111, projection='3d')
+        ax.set_title(fig_title, fontsize=14)
 
-        # Plot della superficie
-        
         if flg_null != None:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.75, shade=True)
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.8, shade=True)
         else:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.75, shade=True)
-        
-        # Plot delle geodetiche
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.6, shade=True)
+
+        # Plot delle geodetiche con più spessore
         for sol in geodesics:
             u_vals, v_vals = sol.y[0], sol.y[1]  # Coordinate sulla submanifold
-
+    
             # Mappiamo le coordinate della geodetica nell'immersione 3D
             x_vals = func[0](u_vals, v_vals)
             y_vals = func[1](u_vals, v_vals)
             z_vals = func[2](u_vals, v_vals)
-
-            ax.plot(x_vals, y_vals, z_vals, color='r', linewidth=2)
-
+    
+            ax.plot(x_vals, y_vals, z_vals, color='r', linewidth=3)
+    
+        
         # Etichette degli assi
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
-
+        # ax.view_init(elev=30, azim=45) possiamo ruotare il plot
+    
         return plt.show()
 
 
