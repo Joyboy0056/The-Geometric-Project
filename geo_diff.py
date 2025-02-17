@@ -558,6 +558,35 @@ class Manifold:
 
 
 
+    
+    def get_einstein_equations(self):
+        """Provides symbolic einstein equations for the given metric"""
+        self.get_einstein_tensor()
+        n = self.dimension
+
+        efe_matrix = [[None for _ in range(n)] for _ in range(n)]
+        for i, mu in enumerate(self.coords):
+            for j, nu in enumerate(self.coords):
+                if mu <= nu:
+                    efe_matrix[i][j] = sp.Eq(self.einstein_tensor[mu, nu], 0)
+        return sp.simplify(efe_matrix)
+
+
+    def display_einstein_equations(self):
+        efe = self.get_einstein_equations()
+        eqs_list = []
+        for i, mu in enumerate(self.coords):
+            for j, nu in enumerate(self.coords):
+                if mu <= nu:
+                    eqs_list.append(efe[i][j])
+                    print(f"\nEinstein equation along {mu}{nu}:")
+                    sp.pprint(eqs_list[i][j])  # Stampa leggibile in console
+                    print("\nLaTeX format:")
+                    print(f'{sp.printing.latex(eqs_list[i][j])}')  # Output LaTeX-friendly
+
+
+
+
 class Submanifold(Manifold):
     def __init__(self, ambient_manifold, sub_coords, embedding):
         """
