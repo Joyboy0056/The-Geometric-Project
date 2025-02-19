@@ -922,7 +922,6 @@ class Submanifold(Manifold):
         return plt.show()
 
 
-
     def get_geometrics_sub(self):
         """Compute the main geometric objects of a (sub)manifold"""
         self.get_induced_metric()
@@ -931,3 +930,51 @@ class Submanifold(Manifold):
         self.get_sectional_curvature_matrix()
         self.get_geodesic_equations()
         self.get_mean_curvatureII()
+
+
+
+class Sphere(Submanifold):
+    def __init__(self, dimension):
+        """Classe per le sfere Sn"""
+        self.dimension = dimension
+        self.coords = [sp.symbols(f'ϕ{j}') for j in range(self.dimension)]
+        self.sub_coords = self.coords #per gestire l'ereditarietà
+        self.ambient_manifold = Manifold(sp.Matrix.eye(self.dimension+1), [sp.symbols(f'x{j}') for j in range(self.dimension+1)])
+        self.embedding = self.get_embedding()
+        self.metric = self.get_induced_metric()
+
+    def get_embedding(self):
+        """
+        Restituisce l'embedding della sfera Sn in R^(n+1).
+        """
+        embedding_coords = []
+        
+        # Costruzione delle coordinate nell'iperspazio
+        for i in range(self.dimension + 1):
+            coord = 1  # Fattore iniziale
+            
+            # Moltiplica i seni delle coordinate precedenti
+            for j in range(i):
+                coord *= sp.sin(self.coords[j])
+            
+            # L'ultimo angolo si usa per un coseno, altrimenti si usa un seno
+            if i < self.dimension:
+                coord *= sp.cos(self.coords[i])
+            
+            embedding_coords.append(coord)
+        
+        return embedding_coords
+
+
+class Hyp(Submanifold):
+    def __init__(self, dimension):
+        """Classe per gli iperboloidi Hn"""
+        self.dimension = dimension
+        self.coords = [sp.symbols('s')] + [sp.symbols(f'ϕ{j}') for j in range(self.dimension-1)]
+        self.sub_coords = self.coords #per gestire l'ereditarietà
+
+        g_Sn_1 = Sphere(self.dimension-1).metric
+        g = sp.Matrix.eye(self.dimension)
+        g[1:, 1:] = sp.sinh(self.coords[0])**2*g_Sn_1
+
+        self.metric = g
