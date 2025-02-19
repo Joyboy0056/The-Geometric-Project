@@ -943,56 +943,7 @@ class Submanifold(Manifold):
         self.get_sectional_curvature_matrix()
         self.get_geodesic_equations()
         self.get_mean_curvatureII()
-
-
-
-    def Jacobi_operator(self, f):
-        """Compute the Jacobi operator J(f)=Δf+(∣A∣2+Ric(N,N))f on the Submanifold
-          applied to an input function
-        :param f: sympy function like sp.Function('f')(sp.symbols('u'), sp.symbols('v'))
-        """
-        A_squared = self.IInd_norm_squared() #questo valorizza anche "self.induced_metric" e "self.normal_field"
         
-        n, k = self.ambient_manifold.dimension, self.dimension
-        if  n - k > 1:
-            """dobbiamo definire una manifold "intermedia" che fa da vero ambiente per i casi tipo S2
-                dove abbiamo (theta,phi) --> (x,y,z,0); infatti in questo caso verrebbe letto che S2 è
-                immerso in R4 invece che in S3 e il Ricci risulterebbe nullo e non quello di S3.
-            """
-
-            #prima gestiamo il campo normale N, che dovrà essere tale che (∂1,...,∂k,N) sia un frame di R^m, m=k+1=n-1
-            embedding = self.embedding[:-1]
-            g_Rm = sp.Matrix.eye(k+1)
-            Rm = Manifold(sp.Matrix.eye(k+1), [sp.symbols(f'x{j}') for j in range(1, k+1)])
-            aux_sub_mfd = Submanifold(Rm, self.sub_coords, embedding) #sarebbe e.g. S2 in R3
-            sp.pprint(aux_sub_mfd.get_induced_metric())
-
-            N = aux_sub_mfd.get_normal_field()
-
-
-            if any(isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh) for expr in self.embedding): #caso hyperbolic Hm, m=k+1
-                coords_Hm = Hyp(k+1).coords
-                g_Hm = Hyp(k+1).metric
-                Hm = Manifold(g_Hm, coords_Hm)
-                Ric = Hm.get_ricci_tensor()
-
-            elif (all(not (isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh)) for expr in self.embedding) 
-      and any(isinstance(expr, sp.Basic) and expr.has(sp.sin, sp.cos) for expr in self.embedding)): #caso spheric Sm, m=k+1
-                coords_Sm = Sphere(k+1).coords
-                g_Sm = Sphere(k+1).metric
-                Sm = Manifold(g_Sm, coords_Sm)
-                Ric = Sm.get_ricci_tensor()
-                
-        else:
-            Ric = self.ambient_manifold.get_ricci_tensor()
-            N = self.normal_field
-
-        Delta_f = self.laplacian(f)
-        Ric_N_N = N * (Ric * N.T) # è ancora una MutableDenseNDimArray della forma [scalar]
-        sp.pprint(Ric_N_N)#debug
-
-
-        return sp.simplify(Delta_f + A_squared*f + Ric_N_N[0]*f)
 
 
 
