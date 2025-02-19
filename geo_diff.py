@@ -613,21 +613,29 @@ class Submanifold(Manifold):
         ambient_metric = self.ambient_manifold.metric
 
         tangent_vectors = [jacobian[:, i] for i in range(self.dimension)]
-        d = len(self.embedding)
+    
+        n = self.ambient_manifold.dimension # = len(self.embedding)
+        k = self.dimension
 
-        normal_vectors = [sp.symbols(f'n{i + 1}') for i in range(d)]  # Lista di simboli normali
+        comps = []
+        normal_vectors = []
+        for i in range(n):
+            comps.append(f'n{i+1}')
+            normal_vectors.append(sp.symbols(comps[i]))
+
+        #normal_vectors = [sp.symbols(f'n{i + 1}') for i in range(d)]  # Lista di simboli normali
         # initial_symbols = [sp.symbols(f'n{i+1}') for i in range(d)] #ci serve per dopo nel caso in cui n-k>1
 
         equations = []
         # Condizioni di ortogonalità rispetto alla metrica
         for tangent in tangent_vectors:
             eq = sum(ambient_metric[i, j] * tangent[i] * normal_vectors[j]
-                     for i in range(d) for j in range(d))
+                     for i in range(n) for j in range(n))
             equations.append(eq)
 
         # Normalizzazione: g(N, N) = 1
         norm_eq = sum(ambient_metric[i, j] * normal_vectors[i] * normal_vectors[j]
-                      for i in range(d) for j in range(d)) - 1
+                      for i in range(n) for j in range(n)) - 1
         equations.append(norm_eq)
 
         # Risolve il sistema e seleziona il verso giusto
@@ -641,9 +649,14 @@ class Submanifold(Manifold):
         # gestione del caso n-k>1: mancante
 
         self.normal_field = sp.Matrix([solutions[0]])
-
         self.normal_field = self.normal_field.subs(sp.I, 1)  # normalizza a reali eventuali vettori complessi
         # questo punto è poco chiaro, non dovrebbe succedere
+
+        # gestione del caso di codimensione > 1
+        if n - k >= 2:
+            vector_function = sp.Lambda(comps[-1], self.normal_field)
+            self.normal_field = vector_function(1) # questo in realtà gestisce solo i casi con vincoli "sferici", come Sn e Hn
+
         return sp.simplify(self.normal_field)
 
     def get_IInd_fundamental_form(self):
@@ -930,6 +943,56 @@ class Submanifold(Manifold):
         self.get_sectional_curvature_matrix()
         self.get_geodesic_equations()
         self.get_mean_curvatureII()
+
+
+
+    def Jacobi_operator(self, f):
+        """Compute the Jacobi operator J(f)=Δf+(∣A∣2+Ric(N,N))f on the Submanifold
+          applied to an input function
+        :param f: sympy function like sp.Function('f')(sp.symbols('u'), sp.symbols('v'))
+        """
+        A_squared = self.IInd_norm_squared() #questo valorizza anche "self.induced_metric" e "self.normal_field"
+        
+        n, k = self.ambient_manifold.dimension, self.dimension
+        if  n - k > 1:
+            """dobbiamo definire una manifold "intermedia" che fa da vero ambiente per i casi tipo S2
+                dove abbiamo (theta,phi) --> (x,y,z,0); infatti in questo caso verrebbe letto che S2 è
+                immerso in R4 invece che in S3 e il Ricci risulterebbe nullo e non quello di S3.
+            """
+
+            #prima gestiamo il campo normale N, che dovrà essere tale che (∂1,...,∂k,N) sia un frame di R^m, m=k+1=n-1
+            embedding = self.embedding[:-1]
+            g_Rm = sp.Matrix.eye(k+1)
+            Rm = Manifold(sp.Matrix.eye(k+1), [sp.symbols(f'x{j}') for j in range(1, k+1)])
+            aux_sub_mfd = Submanifold(Rm, self.sub_coords, embedding) #sarebbe e.g. S2 in R3
+            sp.pprint(aux_sub_mfd.get_induced_metric())
+
+            N = aux_sub_mfd.get_normal_field()
+
+
+            if any(isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh) for expr in self.embedding): #caso hyperbolic Hm, m=k+1
+                coords_Hm = Hyp(k+1).coords
+                g_Hm = Hyp(k+1).metric
+                Hm = Manifold(g_Hm, coords_Hm)
+                Ric = Hm.get_ricci_tensor()
+
+            elif (all(not (isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh)) for expr in self.embedding) 
+      and any(isinstance(expr, sp.Basic) and expr.has(sp.sin, sp.cos) for expr in self.embedding)): #caso spheric Sm, m=k+1
+                coords_Sm = Sphere(k+1).coords
+                g_Sm = Sphere(k+1).metric
+                Sm = Manifold(g_Sm, coords_Sm)
+                Ric = Sm.get_ricci_tensor()
+                
+        else:
+            Ric = self.ambient_manifold.get_ricci_tensor()
+            N = self.normal_field
+
+        Delta_f = self.laplacian(f)
+        Ric_N_N = N * (Ric * N.T) # è ancora una MutableDenseNDimArray della forma [scalar]
+        sp.pprint(Ric_N_N)#debug
+
+
+        return sp.simplify(Delta_f + A_squared*f + Ric_N_N[0]*f)
 
 
 
