@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-
 class Manifold:
     def __init__(self, metric, coordinates):
         """
@@ -136,10 +135,10 @@ class Manifold:
         return self.sectional_curvatures
 
     def print_sectional_curvatures(self):
-        """Prints the sectional curvatures of the Manifold. 
-            It needs that they have been computed before 
+        """Prints the sectional curvatures of the Manifold.
+            It needs that they have been computed before
              by self.get_sectional_curvatures_matrix()"""
-        #self.get_sectional_curvatures_matrix()
+        # self.get_sectional_curvatures_matrix()
         for i, coord1 in enumerate(self.coords):
             for j, coord2 in enumerate(self.coords):
                 if i < j:
@@ -202,8 +201,8 @@ class Manifold:
         """
         self.get_riemann_tensor()
         g_inv = self.metric.inv()
-        #self.get_covariant_riemann()
-        self.get_sectional_curvature_matrix() #questo calcola anche il covariant Riemann
+        # self.get_covariant_riemann()
+        self.get_sectional_curvature_matrix()  # questo calcola anche il covariant Riemann
 
         # Costruisco il Riemann completamente controvariante
         contra_riemann = MutableDenseNDimArray.zeros(
@@ -335,10 +334,10 @@ class Manifold:
         return self.geodesics
 
     def display_geodesic_equations(self):
-        """Prints the geodesics equations of the Manifold. 
-            It needs that they have been computed before 
+        """Prints the geodesics equations of the Manifold.
+            It needs that they have been computed before
              by self.get_geodesic_equations()"""
-        #self.get_geodesic_equations()
+        # self.get_geodesic_equations()
         eqs_list = []
         for i, coord in enumerate(self.coords):
             eqs_list.append(self.geodesics[i])
@@ -401,9 +400,6 @@ class Manifold:
 
         return sol
 
-
-    
-
     def kulkarni_nomizu(self, A, B):
         """
         Compute Kulkarni-Nomizu product of two symmetric (0,2)-tensors as
@@ -419,7 +415,6 @@ class Manifold:
                             i, l]
 
         return sp.simplify(AnomB)
-        
 
     def covariant_derivative(self, X, T, ind):
         """
@@ -475,7 +470,6 @@ class Manifold:
             raise f'This method has not been yet extended to this higher-order tensor field T = {sp.pprint(T)}'
 
         return sp.simplify(nabla_XT)
-        
 
     def gradient(self, f):
         """
@@ -548,15 +542,11 @@ class Manifold:
         )
         return sp.simplify(lapl)
 
-
-
     def get_geometrics(self):
         """Compute the main geometric objects of a (sub)manifold"""
-        self.get_einstein_tensor() #computed: christoffels, riemann, ricci, scalar, einstein
-        self.get_kretschmann_scalar() #computed: covariant riemann, sectional curvatures, kretschmann
+        self.get_einstein_tensor()  # computed: christoffels, riemann, ricci, scalar, einstein
+        self.get_kretschmann_scalar()  # computed: covariant riemann, sectional curvatures, kretschmann
         self.get_geodesic_equations()
-
-
 
 
 class Submanifold(Manifold):
@@ -613,17 +603,17 @@ class Submanifold(Manifold):
         ambient_metric = self.ambient_manifold.metric
 
         tangent_vectors = [jacobian[:, i] for i in range(self.dimension)]
-    
-        n = self.ambient_manifold.dimension # = len(self.embedding)
+
+        n = self.ambient_manifold.dimension  # = len(self.embedding)
         k = self.dimension
 
         comps = []
         normal_vectors = []
         for i in range(n):
-            comps.append(f'n{i+1}')
+            comps.append(f'n{i + 1}')
             normal_vectors.append(sp.symbols(comps[i]))
 
-        #normal_vectors = [sp.symbols(f'n{i + 1}') for i in range(d)]  # Lista di simboli normali
+        # normal_vectors = [sp.symbols(f'n{i + 1}') for i in range(d)]  # Lista di simboli normali
         # initial_symbols = [sp.symbols(f'n{i+1}') for i in range(d)] #ci serve per dopo nel caso in cui n-k>1
 
         equations = []
@@ -655,9 +645,13 @@ class Submanifold(Manifold):
         # gestione del caso di codimensione > 1
         if n - k >= 2:
             vector_function = sp.Lambda(comps[-1], self.normal_field)
-            self.normal_field = vector_function(1) # questo in realtà gestisce solo i casi con vincoli "sferici", come Sn e Hn
+            self.normal_field = vector_function(
+                1)  # questo in realtà gestisce solo i casi con vincoli "sferici", come Sn e Hn
 
-        return sp.simplify(self.normal_field)
+        return sp.simplify(self.normal_field.T)
+
+
+
 
     def get_IInd_fundamental_form(self):
         """
@@ -809,8 +803,6 @@ class Submanifold(Manifold):
         self.mean_curvature = sp.simplify(H)
         return self.mean_curvature
 
-
-    
     def plot_surface(self, domain, fig_title='Surface'):
         """:param domain: it's a list made of 2 tuples giving the intervals of the variables parametrizing the surface"""
 
@@ -834,11 +826,11 @@ class Submanifold(Manifold):
         # Valutiamo le coordinate cartesiane
         Func = [c(U, V) for c in func]
 
-        if flg_null != None: #gestisce i casi con una coordinata nulla
+        if flg_null is not None:  # gestisce i casi con una coordinata nulla
             if flg_null == 0:
-                Func[flg_null] = np.zeros_like(Func[flg_null+1])
-            else: #elif flg_null == 1 or flg_null == 2:
-                Func[flg_null] = np.zeros_like(Func[flg_null-1])
+                Func[flg_null] = np.zeros_like(Func[flg_null + 1])
+            else:  # elif flg_null == 1 or flg_null == 2:
+                Func[flg_null] = np.zeros_like(Func[flg_null - 1])
 
         # Plot
         fig = plt.figure(figsize=(6, 6))
@@ -846,22 +838,24 @@ class Submanifold(Manifold):
         ax = fig.add_subplot(111, projection='3d')
         ax.set_title(fig_title, fontsize=14)
 
-        if flg_null != None:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.9, shade=True)
+        if flg_null is not None:
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.9,
+                            shade=True)
         else:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.9, shade=True)
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='viridis', edgecolor='none', alpha=0.9, shade=True)
 
         # Etichette degli assi
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
-        
+
         # Rimuoviamo i gridlines per un aspetto più pulito
-        #ax.grid(False)
-        #plt.axis('off')
+        # ax.grid(False)
+        # plt.axis('off')
 
         # Aggiunge una barra del colore
-        fig.colorbar(ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.9, shade=True))
+        fig.colorbar(ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='viridis', edgecolor='none', alpha=0.9,
+                                     shade=True))
 
         return plt.show()
 
@@ -893,12 +887,11 @@ class Submanifold(Manifold):
         # Valutiamo l'immersione nello spazio 3D
         Func = [c(U, V) for c in func]
 
-        if flg_null != None: #gestisce i casi con una coordinata nulla
+        if flg_null is not None:  # gestisce i casi con una coordinata nulla
             if flg_null == 0:
-                Func[flg_null] = np.zeros_like(Func[flg_null+1])
-            else: #elif flg_null == 1 or flg_null == 2:
-                Func[flg_null] = np.zeros_like(Func[flg_null-1])
-                
+                Func[flg_null] = np.zeros_like(Func[flg_null + 1])
+            else:  # elif flg_null == 1 or flg_null == 2:
+                Func[flg_null] = np.zeros_like(Func[flg_null - 1])
 
         # Plot
         fig = plt.figure(figsize=(6, 6))
@@ -906,23 +899,23 @@ class Submanifold(Manifold):
         ax = fig.add_subplot(111, projection='3d')
         ax.set_title(fig_title, fontsize=14)
 
-        if flg_null != None:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.8, shade=True)
+        if flg_null is not None:
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='cividis', edgecolor='none', alpha=0.8,
+                            shade=True)
         else:
-            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.6, shade=True)
+            ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='viridis', edgecolor='none', alpha=0.6, shade=True)
 
         # Plot delle geodetiche con più spessore
         for sol in geodesics:
             u_vals, v_vals = sol.y[0], sol.y[1]  # Coordinate sulla submanifold
-    
+
             # Mappiamo le coordinate della geodetica nell'immersione 3D
             x_vals = func[0](u_vals, v_vals)
             y_vals = func[1](u_vals, v_vals)
             z_vals = func[2](u_vals, v_vals)
-    
+
             ax.plot(x_vals, y_vals, z_vals, color='r', linewidth=3)
-    
-        
+
         # Etichette degli assi
         ax.set_xlabel("x")
         ax.set_ylabel("y")
@@ -930,10 +923,10 @@ class Submanifold(Manifold):
         # ax.view_init(elev=30, azim=45) possiamo ruotare il plot
 
         # Aggiunge una barra del colore
-        fig.colorbar(ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='Blues', edgecolor='none', alpha=0.9, shade=True))
-    
-        return plt.show()
+        fig.colorbar(ax.plot_surface(Func[0], Func[1], Func[2], color='c', cmap='viridis', edgecolor='none', alpha=0.9,
+                                     shade=True))
 
+        return plt.show()
 
     def get_geometrics_sub(self):
         """Compute the main geometric objects of a (sub)manifold"""
@@ -943,7 +936,83 @@ class Submanifold(Manifold):
         self.get_sectional_curvature_matrix()
         self.get_geodesic_equations()
         self.get_mean_curvatureII()
-        
+
+
+    def IInd_norm_squared(self):
+        """Compute the squared norm ∣A∣2=h^ij h_ij of the IInd form h"""
+        n = self.dimension
+        h = self.get_IInd_fundamental_form()
+        g = self.get_induced_metric()
+        g_inv = g.inv()
+
+        h_up = sp.Matrix.zeros(n, n)
+        for i in range(n):
+            for j in range(n):
+                h_up[i, j] = sum(
+                    g_inv[i, k] * g_inv[j, l] * h[k, l]
+                    for k in range(n) for l in range(n)
+                )
+        A_squared = sum(h_up[i, j] * h[i, j] for i in range(n) for j in range(n))
+        return sp.simplify(A_squared)
+
+
+    def get_orth_frame(self, embedding):
+        """Fornisce un frame ortonormale per una hypersurface
+            :param embedding: è una lista con le componenti dell'immagine dell'embedding"""
+        n = self.dimension+1
+        Rn = Manifold(sp.Matrix.eye(n), [sp.symbols(f'x_{j}') for j in range(n)])
+
+        hypersurface = Submanifold(Rn, self.sub_coords, embedding)
+        hypersurface.get_normal_field()
+
+        frame = [hypersurface.embedding_jacobian[:, j] for j in range(self.dimension)]
+        frame.append(hypersurface.normal_field.T)
+        return frame
+
+    def Jacobi_operator(self, f):
+        """Compute the Jacobi operator J(f)=Δf+(∣A∣2+Ric(N,N))f on the Submanifold
+          applied to an input function
+        :param f: sympy function like sp.Function('f')(sp.symbols('u'), sp.symbols('v'))
+        """
+
+        n, k = self.ambient_manifold.dimension, self.dimension
+        if n - k > 1:
+            """dobbiamo definire una manifold "intermedia" che fa da vero ambiente per i casi tipo S2
+                dove abbiamo (theta,phi) --> (x,y,z,0); infatti in questo caso verrebbe letto che S2 è
+                immerso in R4 invece che in S3 e il Ricci risulterebbe nullo e non quello di S3.
+            """
+
+            # prima gestiamo il campo normale N, che dovrà essere tale che (∂1,...,∂k,N) sia un frame di R^m, m=k+1=n-1
+            embedding = self.embedding[:-1]
+            frame = self.get_orth_frame(embedding)
+
+            N = frame[-1]
+
+            if any(isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh) for expr in
+                   self.embedding):  # caso hyperbolic Hm, m=k+1
+                coords_Hm = Hyp(k + 1).coords
+                g_Hm = Hyp(k + 1).metric
+                Hm = Manifold(g_Hm, coords_Hm)
+                Ric = Hm.get_ricci_tensor()
+
+            elif (all(not (isinstance(expr, sp.Basic) and expr.has(sp.sinh, sp.cosh)) for expr in self.embedding)
+                  and any(isinstance(expr, sp.Basic) and expr.has(sp.sin, sp.cos) for expr in
+                          self.embedding)):  # caso spheric Sm, m=k+1
+                coords_Sm = Sphere(k + 1).coords
+                g_Sm = Sphere(k + 1).metric
+                Sm = Manifold(g_Sm, coords_Sm)
+                Ric = Sm.get_ricci_tensor()
+
+        else:
+            Ric = self.ambient_manifold.get_ricci_tensor()
+            N = self.get_normal_field()
+
+        A_squared = self.IInd_norm_squared()  # questo valorizza anche "self.induced_metric" e "self.normal_field"
+        Delta_f = self.laplacian(f)
+
+        Ric_N_N = N.T * (Ric * N)  # è ancora una MutableDenseNDimArray della forma [scalar]
+
+        return sp.simplify(Delta_f + A_squared * f + Ric_N_N[0] * f)
 
 
 
@@ -951,9 +1020,10 @@ class Sphere(Submanifold):
     def __init__(self, dimension):
         """Classe per le sfere Sn"""
         self.dimension = dimension
-        self.coords = [sp.symbols(f'ϕ{j}') for j in range(self.dimension)]
-        self.sub_coords = self.coords #per gestire l'ereditarietà
-        self.ambient_manifold = Manifold(sp.Matrix.eye(self.dimension+1), [sp.symbols(f'x{j}') for j in range(self.dimension+1)])
+        self.coords = [sp.symbols(f'θ{j}') for j in range(self.dimension)]
+        self.sub_coords = self.coords  # per gestire l'ereditarietà
+        self.ambient_manifold = Manifold(sp.Matrix.eye(self.dimension + 1),
+                                         [sp.symbols(f'x{j}') for j in range(self.dimension + 1)])
         self.embedding = self.get_embedding()
         self.metric = self.get_induced_metric()
 
@@ -962,21 +1032,21 @@ class Sphere(Submanifold):
         Restituisce l'embedding della sfera Sn in R^(n+1).
         """
         embedding_coords = []
-        
+
         # Costruzione delle coordinate nell'iperspazio
         for i in range(self.dimension + 1):
             coord = 1  # Fattore iniziale
-            
+
             # Moltiplica i seni delle coordinate precedenti
             for j in range(i):
                 coord *= sp.sin(self.coords[j])
-            
+
             # L'ultimo angolo si usa per un coseno, altrimenti si usa un seno
             if i < self.dimension:
                 coord *= sp.cos(self.coords[i])
-            
+
             embedding_coords.append(coord)
-        
+
         return embedding_coords
 
 
@@ -984,11 +1054,11 @@ class Hyp(Submanifold):
     def __init__(self, dimension):
         """Classe per gli iperboloidi Hn"""
         self.dimension = dimension
-        self.coords = [sp.symbols('s')] + [sp.symbols(f'ϕ{j}') for j in range(self.dimension-1)]
-        self.sub_coords = self.coords #per gestire l'ereditarietà
+        self.coords = [sp.symbols('s')] + [sp.symbols(f'θ{j}') for j in range(self.dimension - 1)]
+        self.sub_coords = self.coords  # per gestire l'ereditarietà
 
-        g_Sn_1 = Sphere(self.dimension-1).metric
+        g_Sn_1 = Sphere(self.dimension - 1).metric
         g = sp.Matrix.eye(self.dimension)
-        g[1:, 1:] = sp.sinh(self.coords[0])**2*g_Sn_1
+        g[1:, 1:] = sp.sinh(self.coords[0]) ** 2 * g_Sn_1
 
         self.metric = g
