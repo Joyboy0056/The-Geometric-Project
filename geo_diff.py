@@ -549,6 +549,9 @@ class Manifold:
         self.get_geodesic_equations()
 
 
+
+
+
 class Submanifold(Manifold):
     def __init__(self, ambient_manifold, sub_coords, embedding):
         """
@@ -1009,8 +1012,9 @@ class Submanifold(Manifold):
 
         A_squared = self.IInd_norm_squared()  # questo valorizza anche "self.induced_metric" e "self.normal_field"
         Delta_f = self.laplacian(f)
-
         Ric_N_N = N.T * (Ric * N)  # è ancora una MutableDenseNDimArray della forma [scalar]
+
+        sp.pprint(Ric_N_N) #DEBUG
 
         return sp.simplify(Delta_f + A_squared * f + Ric_N_N[0] * f)
 
@@ -1020,12 +1024,14 @@ class Sphere(Submanifold):
     def __init__(self, dimension):
         """Classe per le sfere Sn"""
         self.dimension = dimension
-        self.coords = [sp.symbols(f'θ{j}') for j in range(self.dimension)]
+        self.coords = [sp.symbols(f'θ{j+1}') for j in range(self.dimension)]
         self.sub_coords = self.coords  # per gestire l'ereditarietà
         self.ambient_manifold = Manifold(sp.Matrix.eye(self.dimension + 1),
                                          [sp.symbols(f'x{j}') for j in range(self.dimension + 1)])
         self.embedding = self.get_embedding()
         self.metric = self.get_induced_metric()
+
+        self.get_geometrics()
 
     def get_embedding(self):
         """
@@ -1054,7 +1060,7 @@ class Hyp(Submanifold):
     def __init__(self, dimension):
         """Classe per gli iperboloidi Hn"""
         self.dimension = dimension
-        self.coords = [sp.symbols('s')] + [sp.symbols(f'θ{j}') for j in range(self.dimension - 1)]
+        self.coords = [sp.symbols('s')] + [sp.symbols(f'θ{j+1}') for j in range(self.dimension - 1)]
         self.sub_coords = self.coords  # per gestire l'ereditarietà
 
         g_Sn_1 = Sphere(self.dimension - 1).metric
@@ -1062,3 +1068,77 @@ class Hyp(Submanifold):
         g[1:, 1:] = sp.sinh(self.coords[0]) ** 2 * g_Sn_1
 
         self.metric = g
+        self.get_geometrics()
+
+
+
+
+class Eucl(Submanifold):
+    def __init__(self, dimension):
+        """Classe per gli gli spazi Euclidei Rn"""
+        self.dimension = dimension
+        self.coords = [sp.symbols(f'x{j+1}') for j in range(self.dimension)]
+        self.sub_coords = self.coords  # per gestire l'ereditarietà
+
+        self.metric = sp.Matrix.eye(self.dimension)
+        self.get_geometrics()
+
+        # polar coordinates
+        r = sp.symbols('r')
+        g = sp.Matrix.eye(self.dimension)
+        g[1:, 1:] = r**2*Sphere(self.dimension-1).metric
+
+        self.polar = Manifold(g, [r]+[sp.symbols(f'θ{j+1}') for j in range(self.dimension-1)])
+        self.polar.get_geometrics()
+
+
+
+
+class Minkowski(Submanifold):
+    def __init__(self, neg, plus):
+        """Classe per gli spazi di Minkowski R^(1,n)"""
+        self.neg = neg
+        self.plus = plus
+        self.dimension = neg + plus
+        self.coords = [sp.symbols(f'x{j}') for j in range(self.dimension)]
+        self.sub_coords = self.coords  # per gestire l'ereditarietà
+
+        g = sp.Matrix.eye(self.dimension)
+        g[:self.neg, :self.neg] = -sp.Matrix.eye(self.neg)
+
+        self.metric = g
+        self.get_geometrics()
+
+
+
+class Schwarzschild(Submanifold):
+     def __init__(self, dimension):
+        """Classe per le foglie Schwarzschild spacelike"""
+
+        self.dimension = dimension
+
+        r, G, m = sp.symbols('r G m')
+        u = sp.sqrt(1- 2*G*m*r**(2-self.dimension))
+
+        self.coords = [r] + [sp.symbols(f'θ{j+1}') for j in range(self.dimension-1)]
+        self.sub_coords = self.coords  # per gestire l'ereditarietà
+
+        g = sp.Matrix.eye(self.dimension)
+        g[0, 0] = 1/u**2
+        g[1:, 1:] = r**2*Sphere(self.dimension-1).metric
+
+        self.metric = g
+
+        self.get_geometrics()
+
+        g_spacetime = sp.Matrix.eye(self.dimension+1)
+        g_spacetime[1:, 1:] = self.metric
+        g_spacetime[0, 0] = -u**2
+
+        self.spacetime_coords = [sp.symbols('t')] + self.coords
+        self.spacetime = Manifold(g_spacetime, self.spacetime_coords)
+        self.spacetime.get_geometrics()
+
+        horizon_embedding = [0, 2*sp.symbols('G')*sp.symbols('m')] + self.coords[1:]
+        self.horizon = Submanifold(self.spacetime, self.coords[1:], horizon_embedding)
+        self.horizon.get_geometrics_sub()
